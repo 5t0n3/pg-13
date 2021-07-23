@@ -1,7 +1,7 @@
-import toml
-from discord.ext import commands
+import sqlite
 
-from audit import AuditCog
+from discord.ext import commands
+import toml
 
 
 class PG13Bot(commands.Bot):
@@ -11,8 +11,9 @@ class PG13Bot(commands.Bot):
         super().__init__(command_prefix=self.config["prefix"])
         self.logger = logger
 
+        self.scores_db = sqlite.connect("scores.db")
+
         # Load cogs
-        self.add_cog(AuditCog(self))
 
     def run(self):
         super().run(self.config["token"])
