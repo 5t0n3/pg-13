@@ -1,5 +1,3 @@
-import sqlite
-
 from discord.ext import commands
 import toml
 
@@ -10,8 +8,6 @@ class PG13Bot(commands.Bot):
 
         super().__init__(command_prefix=self.config["prefix"])
         self.logger = logger
-
-        self.scores_db = sqlite.connect("scores.db")
 
         # Load cogs
 

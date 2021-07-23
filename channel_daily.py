@@ -1,4 +1,4 @@
-import sqlite3
+import aiosqlite
 
 from discord.ext import commands
 
@@ -6,54 +6,53 @@ from discord.ext import commands
 class ChannelDailyCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.dailies = None
-
-    @commands.Cog.listener()
-    async def on_ready():
-        if self.dailies is None:
-            self.dailies = sqlite3.connect("dailies.dailies")
-
-    @commands.Cog.listener()
-    async def on_disconnect(self):
-        if self.dailies is not None:
-            self.dailies.close()
-            self.dailies = None
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        self.dailies.execute(
-            "SELECT * FROM sqlite_master WHERE name = ?", (message.guild.id,)
-        )
-        current_guild = self.dailies.fetchone()[0]
+        # Give user daily bonus if applicable
+        async with aiosqlite.connect("dailies.db") as dailies:
+            # Check if guild has dailies
+            guild_dailies = await dailies.execute(
+                "SELECT * FROM sqlite_master WHERE name = ?", (message.guild.id,)
+            ).fetchone()
 
-        if current_guild is not None:
-            self.dailies.execute(
-                "SELECT claimed FROM ? WHERE user_id = ?",
-                (message.channel.id, message.author.id),
-            )
-            claimed_today = self.dailies.fetchone()[0]
-
-            if not claimed_today:
-                scores = self.bot.scores_db
-                scores.execute(
-                    "SELECT score FROM ? WHERE user_id = ?",
-                    (message.guild.id, message.author.id),
-                )
-                user_score = self.bot.scores.fetchone()[0] or 0
-
-                # Fetch channel's increment
-                self.dailies.execute(
-                    "SELECT increment FROM ? WHERE channel_id = ?",
+            if guild_dailies is not None:
+                # Check if message's channel has a daily bonus
+                channel_bonus = await dailies.execute(
+                    "SELECT increment FROM ? WHERE channel = ?",
                     (message.guild.id, message.channel.id),
-                )
-                increment = self.dailies.fetchone()[0]
+                ).fetchone()
 
-                # Update user's score
-                new_score = user_score + increment
-                with scores:
-                    scores.execute(
-                        "INSERT INTO ? (user_id, score) values (?, ?) ON DUPLICATE KEY UPDATE score = ?",
-                        (message.guild.id, message.author.id, new_score, new_score),
-                    )
+                if channel_bonus is not None:
+                    claimed_today = await dailies.execute(
+                        "SELECT claimed FROM ? WHERE user_id = ?",
+                        (message.channel.id, message.author.id),
+                    ).fetchone()
+
+                    # Handle None case (user hasn't claimed in the past)
+                    # or False case (not claimed today)
+                    if claimed_today is None:
+                        async with aiosqlite.connect("scores.db") as scores:
+                            # Fetch user score or default to (a row containing) 0
+                            user_score = (
+                                await scores.execute(
+                                    "SELECT score FROM ? WHERE user_id = ?",
+                                    (message.guild.id, message.author.id),
+                                ).fetchone()
+                                or (0,)
+                            )
+
+                            # Update user's score
+                            new_score = user_score["score"] + channel_bonus["increment"]
+                            await scores.execute(
+                                "INSERT INTO ? (user_id, score) values (?, ?) ON DUPLICATE KEY UPDATE score = ?",
+                                (
+                                    message.guild.id,
+                                    message.author.id,
+                                    new_score,
+                                    new_score,
+                                ),
+                            )
+                            await scores.commit()
 
         await self.bot.process_commands(message)
