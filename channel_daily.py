@@ -1,5 +1,4 @@
 import aiosqlite
-
 from discord.ext import commands
 from discord_slash import cog_ext
 from discord_slash.model import SlashCommandOptionType as OptionType
@@ -35,9 +34,38 @@ class ChannelDailyCog(commands.Cog):
         ],
     )
     async def daily_create(self, ctx: SlashContext, channel, bonus=1):
-        print(channel)
-        await ctx.send(content="got your command!")
-        pass
+        # Note: "channel" is a `discord.channel.TextChannel`
+
+        async with aiosqlite.connect("dailies.db") as dailies:
+            # Add entry in guild table (create if doesn't exist?) with increment
+            await dailies.execute(
+                f"CREATE TABLE IF NOT EXISTS guild_{ctx.guild_id}(channel INT PRIMARY KEY, increment INT)",
+            )
+            exists_request = await dailies.execute(
+                f"SELECT * FROM guild_{ctx.guild_id} WHERE channel = ?", (channel.id,)
+            )
+            entry_exists = await exists_request.fetchone()
+
+            if entry_exists:
+                return await ctx.send(f"#{channel} already has a daily point reward!")
+
+            # Create channel table (named channel id)
+            else:
+                # Update guild table with increment
+                await dailies.execute(
+                    f"INSERT INTO guild_{ctx.guild_id} (channel, increment) VALUES (?, ?)",
+                    (channel.id, bonus),
+                )
+
+                # Create channel cooldown table
+                await dailies.execute(
+                    f"CREATE TABLE channel_{channel.id} (user INT PRIMARY KEY, claimed BOOLEAN)",
+                )
+
+            # Commit all changes
+            await dailies.commit()
+
+        await ctx.send(f"Successfully added {bonus}-point daily bonus to #{channel}!")
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -45,22 +73,22 @@ class ChannelDailyCog(commands.Cog):
         async with aiosqlite.connect("dailies.db") as dailies:
             # Check if guild has dailies
             guild_table = await dailies.execute(
-                "SELECT * FROM sqlite_master WHERE name = ?", (message.guild.id,)
+                f"SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'guild_{message.guild.id}'"
             )
             has_dailies = await guild_table.fetchone()
 
             if has_dailies is not None:
                 # Check if message's channel has a daily bonus
                 channel_request = await dailies.execute(
-                    "SELECT increment FROM ? WHERE channel = ?",
-                    (message.guild.id, message.channel.id),
+                    f"SELECT increment FROM guild_{message.guild.id} WHERE channel = ?",
+                    (message.channel.id,),
                 )
                 channel_bonus = await channel_request.fetchone()
 
                 if channel_bonus is not None:
                     claim_request = await dailies.execute(
-                        "SELECT claimed FROM ? WHERE user_id = ?",
-                        (message.channel.id, message.author.id),
+                        f"SELECT claimed FROM channel_{message.channel.id} WHERE user = ?",
+                        (message.author.id,),
                     )
                     claimed_today = await claim_request.fetchone()
 
@@ -69,28 +97,41 @@ class ChannelDailyCog(commands.Cog):
                     if claimed_today is None:
                         async with aiosqlite.connect("scores.db") as scores:
                             # Fetch user score or default to (a row containing) 0
-                            score_request = (
-                                await scores.execute(
-                                    "SELECT score FROM ? WHERE user_id = ?",
-                                    (message.guild.id, message.author.id),
-                                ).fetchone()
-                                or (0,)
+                            score_request = await scores.execute(
+                                f"SELECT score FROM guild_{message.guild.id} WHERE user = ?",
+                                (message.author.id,),
                             )
                             current_score = await score_request.fetchone()
 
                             # Update user's score
-                            new_score = (current_score[0] or (0,))[0] + channel_bonus[
-                                "increment"
-                            ]
+                            new_score = (current_score or (0,))[0] + channel_bonus[0]
                             await scores.execute(
-                                "INSERT INTO ? (user_id, score) values (?, ?) ON DUPLICATE KEY UPDATE score = ?",
+                                f"INSERT INTO guild_{message.guild.id}(user, score) VALUES(?, ?) ON CONFLICT(user) DO UPDATE SET score = ?",
                                 (
-                                    message.guild.id,
                                     message.author.id,
                                     new_score,
                                     new_score,
                                 ),
                             )
+
                             await scores.commit()
+                            self.bot.logger.debug(
+                                "Successfully updated score of user {message.author.id} to {new_score}"
+                            )
+
+                        # Updated daily claimed table
+                        await dailies.execute(
+                            f"INSERT INTO channel_{message.channel.id}(user, claimed) VALUES(?, ?)",
+                            (message.author.id, True),
+                        )
+                        await dailies.commit()
+                        self.bot.logger.debug(
+                            f"Added user to claimed table: {message.author.id}"
+                        )
+
+                    else:
+                        self.bot.logger.debug(
+                            f"User {message.author.id} already claimed daily"
+                        )
 
         await self.bot.process_commands(message)

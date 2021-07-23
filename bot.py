@@ -3,6 +3,7 @@ from discord_slash import SlashCommand
 import toml
 
 from channel_daily import ChannelDailyCog
+from scores import ScoresCog
 
 
 class PG13Bot(commands.Bot):
@@ -17,6 +18,7 @@ class PG13Bot(commands.Bot):
         self.slash = SlashCommand(self, sync_commands=True)
 
         # Load cogs
+        self.add_cog(ScoresCog(self))
         self.add_cog(ChannelDailyCog(self))
 
     def run(self):
