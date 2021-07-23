@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 
 import aiosqlite
@@ -118,7 +119,7 @@ class ChannelDailyCog(commands.Cog):
 
                             await scores.commit()
                             self.bot.logger.debug(
-                                "Successfully updated score of user {message.author.id} to {new_score}"
+                                f"Successfully updated score of user {message.author.id} to {new_score}"
                             )
 
                         # Updated daily claimed table
@@ -150,7 +151,7 @@ class ChannelDailyCog(commands.Cog):
             )
 
             # Clear (not delete) all channel tables
-            for name in tables:
+            for (name,) in tables:
                 if name.startswith("channel_"):
                     await dailies.execute(f"DELETE FROM {name}")
 
@@ -160,11 +161,14 @@ class ChannelDailyCog(commands.Cog):
 
     @clear_daily_claims.before_loop
     async def ensure_clear_time(self):
-        hour, minute = 23, 55
-        await bot.wait_until_ready()
+        hour, minute = 23, 58
+        await self.bot.wait_until_ready()
 
         now = datetime.datetime.now()
         future = datetime.datetime(now.year, now.month, now.day, hour, minute)
         if now.hour >= hour and now.minute >= minute:
             future += datetime.timedelta(days=1)
+
+        self.bot.logger.debug("Delaying claim clear until proper time")
         await asyncio.sleep((future - now).seconds)
+        self.bot.logger.debug("Finished delaying claim clear")
