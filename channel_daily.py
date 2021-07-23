@@ -1,5 +1,7 @@
+import datetime
+
 import aiosqlite
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord_slash import cog_ext
 from discord_slash.model import SlashCommandOptionType as OptionType
 from discord_slash.context import SlashContext
@@ -16,8 +18,8 @@ class ChannelDailyCog(commands.Cog):
     @cog_ext.cog_subcommand(
         base="daily",
         name="create",
-        guild_ids=GUILDS,
         description="Attach a daily reward to messages in a channel.",
+        guild_ids=GUILDS,
         options=[
             create_option(
                 name="channel",
@@ -135,3 +137,34 @@ class ChannelDailyCog(commands.Cog):
                         )
 
         await self.bot.process_commands(message)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        self.clear_daily_claims.start()
+
+    @tasks.loop(hours=24)
+    async def clear_daily_claims(self):
+        async with aiosqlite.connect("dailies.db") as dailies:
+            tables = await dailies.execute_fetchall(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+
+            # Clear (not delete) all channel tables
+            for name in tables:
+                if name.startswith("channel_"):
+                    await dailies.execute(f"DELETE FROM {name}")
+
+            await dailies.commit()
+
+        self.bot.logger.debug("Successfully cleared all claim tables")
+
+    @clear_daily_claims.before_loop
+    async def ensure_clear_time(self):
+        hour, minute = 23, 55
+        await bot.wait_until_ready()
+
+        now = datetime.datetime.now()
+        future = datetime.datetime(now.year, now.month, now.day, hour, minute)
+        if now.hour >= hour and now.minute >= minute:
+            future += datetime.timedelta(days=1)
+        await asyncio.sleep((future - now).seconds)
