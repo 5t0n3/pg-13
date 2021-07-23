@@ -24,14 +24,14 @@ class ChannelDailyCog(commands.Cog):
         self.dailies.execute(
             "SELECT * FROM sqlite_master WHERE name = ?", (message.guild.id,)
         )
-        current_guild = self.dailies.fetchone()
+        current_guild = self.dailies.fetchone()[0]
 
         if current_guild is not None:
             self.dailies.execute(
                 "SELECT claimed FROM ? WHERE user_id = ?",
                 (message.channel.id, message.author.id),
             )
-            claimed_today = self.dailies.fetchone()
+            claimed_today = self.dailies.fetchone()[0]
 
             if not claimed_today:
                 scores = self.bot.scores_db
@@ -39,14 +39,14 @@ class ChannelDailyCog(commands.Cog):
                     "SELECT score FROM ? WHERE user_id = ?",
                     (message.guild.id, message.author.id),
                 )
-                user_score = self.bot.scores.fetchone() or 0
+                user_score = self.bot.scores.fetchone()[0] or 0
 
                 # Fetch channel's increment
                 self.dailies.execute(
                     "SELECT increment FROM ? WHERE channel_id = ?",
                     (message.guild.id, message.channel.id),
                 )
-                increment = self.dailies.fetchone()
+                increment = self.dailies.fetchone()[0]
 
                 # Update user's score
                 new_score = user_score + increment
