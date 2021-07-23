@@ -1,2 +1,6 @@
+# Python-related folders
 .venv/**
 __pycache__/
+
+# Configuration
+*.toml
