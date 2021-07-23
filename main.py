@@ -12,5 +12,5 @@ logger.addHandler(handler)
 # For scheduling:
 # https://stackoverflow.com/a/61180222
 
-pg13_bot = PG13Bot("botconfig.toml", logger)
+pg13_bot = PG13Bot("config.toml", logger)
 pg13_bot.run()
