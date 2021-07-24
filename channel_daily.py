@@ -10,11 +10,10 @@ from discord_slash.utils.manage_commands import create_option
 
 
 class ChannelDailyCog(commands.Cog):
-    GUILDS = []
+    GUILDS = [745332731184939039]
 
     def __init__(self, bot):
         self.bot = bot
-        self.GUILDS = self.bot.guild_ids
 
     @cog_ext.cog_subcommand(
         base="daily",
@@ -34,15 +33,21 @@ class ChannelDailyCog(commands.Cog):
                 option_type=OptionType.INTEGER,
                 required=False,
             ),
+            create_option(
+                name="attachment",
+                description="Whether an attachment (e.g. image) is necessary to get the bonus (default false).",
+                option_type=OptionType.BOOLEAN,
+                required=False,
+            ),
         ],
     )
-    async def daily_create(self, ctx: SlashContext, channel, bonus=1):
+    async def daily_create(self, ctx: SlashContext, channel, bonus=1, attachment=False):
         # Note: "channel" is a `discord.channel.TextChannel`
 
         async with aiosqlite.connect("dailies.db") as dailies:
             # Add entry in guild table (create if doesn't exist?) with increment
             await dailies.execute(
-                f"CREATE TABLE IF NOT EXISTS guild_{ctx.guild_id}(channel INT PRIMARY KEY, increment INT)",
+                f"CREATE TABLE IF NOT EXISTS guild_{ctx.guild_id}(channel INT PRIMARY KEY, increment INT, attachment BOOLEAN)",
             )
             exists_request = await dailies.execute(
                 f"SELECT * FROM guild_{ctx.guild_id} WHERE channel = ?", (channel.id,)
@@ -52,12 +57,11 @@ class ChannelDailyCog(commands.Cog):
             if entry_exists:
                 return await ctx.send(f"#{channel} already has a daily point reward!")
 
-            # Create channel table (named channel id)
             else:
                 # Update guild table with increment
                 await dailies.execute(
-                    f"INSERT INTO guild_{ctx.guild_id} (channel, increment) VALUES (?, ?)",
-                    (channel.id, bonus),
+                    f"INSERT INTO guild_{ctx.guild_id} (channel, increment, attachment) VALUES (?, ?, ?)",
+                    (channel.id, bonus, attachment),
                 )
 
                 # Create channel cooldown table
@@ -83,7 +87,7 @@ class ChannelDailyCog(commands.Cog):
             if has_dailies is not None:
                 # Check if message's channel has a daily bonus
                 channel_request = await dailies.execute(
-                    f"SELECT increment FROM guild_{message.guild.id} WHERE channel = ?",
+                    f"SELECT increment, attachment FROM guild_{message.guild.id} WHERE channel = ?",
                     (message.channel.id,),
                 )
                 channel_bonus = await channel_request.fetchone()
@@ -95,9 +99,14 @@ class ChannelDailyCog(commands.Cog):
                     )
                     claimed_today = await claim_request.fetchone()
 
-                    # Handle None case (user hasn't claimed in the past)
-                    # or False case (not claimed today)
-                    if claimed_today is None:
+                    # Check for message attachment if required
+                    if channel_bonus[1] and not message.attachments:
+                        self.bot.logger.debug(
+                            f"User {message.author.id} didn't provide necessary attachment"
+                        )
+
+                    # Bonus not claimed and attachment(s) supplied if necessary
+                    elif claimed_today is None:
                         async with aiosqlite.connect("scores.db") as scores:
                             # Fetch user score or default to (a row containing) 0
                             score_request = await scores.execute(
