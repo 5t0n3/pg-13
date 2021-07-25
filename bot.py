@@ -8,7 +8,7 @@ import toml
 
 class PG13Bot(commands.Bot):
     def __init__(self, config_path):
-        self.config = toml.load(config_path)
+        config = toml.load(config_path)
 
         # Choose only necessary intents
         bot_intents = discord.Intents(
@@ -16,9 +16,11 @@ class PG13Bot(commands.Bot):
         )
 
         super().__init__(
-            command_prefix=self.config["commands"]["prefix"], intents=bot_intents
+            command_prefix=config["commands"]["prefix"], intents=bot_intents
         )
         self.logger = logging.getLogger("pg13")
+        self.guild_ids = config["commands"]["guilds"]
+        self._token = config["token"]
 
         # Initialize slash commands
         self.slash = SlashCommand(self, sync_commands=True)
@@ -29,7 +31,7 @@ class PG13Bot(commands.Bot):
             self.load_extension(cog)
 
     def run(self):
-        super().run(self.config["token"])
+        super().run(self._token)
 
     async def on_ready(self):
         self.logger.info("Now running!")

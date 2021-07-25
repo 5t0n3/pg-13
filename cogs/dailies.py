@@ -9,6 +9,8 @@ from discord_slash.model import SlashCommandOptionType as OptionType
 from discord_slash.context import SlashContext
 from discord_slash.utils.manage_commands import create_option
 
+from .guild_ids import GUILD_IDS
+
 
 class ChannelDailyCog(commands.Cog):
     GUILDS = [745332731184939039]
@@ -21,7 +23,7 @@ class ChannelDailyCog(commands.Cog):
         base="daily",
         name="create",
         description="Attach a daily reward to messages in a channel.",
-        guild_ids=GUILDS,
+        guild_ids=GUILD_IDS,
         options=[
             create_option(
                 name="channel",
