@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import logging
 
 import aiosqlite
 from discord.ext import commands, tasks
@@ -14,6 +15,7 @@ class ChannelDailyCog(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.logger = logging.getLogger("pg13.dailies")
 
     @cog_ext.cog_subcommand(
         base="daily",
@@ -101,7 +103,7 @@ class ChannelDailyCog(commands.Cog):
 
                     # Check for message attachment if required
                     if channel_bonus[1] and not message.attachments:
-                        self.bot.logger.debug(
+                        self.logger.info(
                             f"User {message.author.id} didn't provide necessary attachment"
                         )
 
@@ -127,7 +129,7 @@ class ChannelDailyCog(commands.Cog):
                             )
 
                             await scores.commit()
-                            self.bot.logger.debug(
+                            self.logger.info(
                                 f"Successfully updated score of user {message.author.id} to {new_score}"
                             )
 
@@ -137,12 +139,12 @@ class ChannelDailyCog(commands.Cog):
                             (message.author.id, True),
                         )
                         await dailies.commit()
-                        self.bot.logger.debug(
+                        self.logger.info(
                             f"Added user to claimed table: {message.author.id}"
                         )
 
                     else:
-                        self.bot.logger.debug(
+                        self.logger.info(
                             f"User {message.author.id} already claimed daily"
                         )
 
@@ -166,7 +168,7 @@ class ChannelDailyCog(commands.Cog):
 
             await dailies.commit()
 
-        self.bot.logger.debug("Successfully cleared all claim tables")
+        self.logger.info("Successfully cleared all claim tables")
 
     @clear_daily_claims.before_loop
     async def ensure_clear_time(self):
@@ -178,6 +180,10 @@ class ChannelDailyCog(commands.Cog):
         if now.hour >= hour and now.minute >= minute:
             future += datetime.timedelta(days=1)
 
-        self.bot.logger.debug("Delaying claim clear until proper time")
+        self.logger.info("Delaying claim clear until proper time")
         await asyncio.sleep((future - now).seconds)
-        self.bot.logger.debug("Finished delaying claim clear")
+        self.logger.info("Finished delaying claim clear")
+
+
+def setup(bot):
+    bot.add_cog(ChannelDailyCog(bot))

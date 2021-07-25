@@ -1,3 +1,5 @@
+import logging
+
 import aiosqlite
 from discord.ext import commands
 
@@ -5,6 +7,7 @@ from discord.ext import commands
 class ScoresCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.logger = logging.getLogger("pg13.scores")
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -18,4 +21,8 @@ class ScoresCog(commands.Cog):
                 )
 
             await scores.commit()
-            self.bot.logger.debug("Successfully initialized all guild score tables.")
+            self.logger.info("Successfully initialized all guild score tables.")
+
+
+def setup(bot):
+    bot.add_cog(ScoresCog(bot))
