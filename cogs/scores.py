@@ -54,6 +54,69 @@ class ScoresCog(commands.Cog):
         )
         await ctx.send(embed=leaderboard_embed)
 
+    @cog_ext.cog_slash(
+        name="rank",
+        description="Display a user's rank & score in this server.",
+        guild_ids=GUILD_IDS,
+        options=[
+            create_option(
+                name="user",
+                description="The user to display the rank of (default you).",
+                option_type=OptionType.USER,
+                required=False,
+            )
+        ],
+    )
+    async def rank(self, ctx: SlashContext, user=None):
+        if user is None:
+            user = ctx.author
+
+        # TODO: Implement caching of guild leaderboards
+        # Get guild & user's score(s) for standings comparison
+        async with aiosqlite.connect("scores.db") as scores:
+            guild_standings = await scores.execute_fetchall(
+                f"SELECT DISTINCT score FROM guild_{ctx.guild_id} ORDER BY score DESC"
+            )
+
+            async with scores.execute(
+                f"SELECT score FROM guild_{ctx.guild_id} WHERE user = ?",
+                (user.id,),
+            ) as user_cursor:
+                user_row = await user_cursor.fetchone()
+
+        # Row doesn't exist -> user hasn't gotten any points yet
+        if user_row is None:
+            return await ctx.send("That user doesn't have any points yet!")
+
+        # Fetch user's place (treating ties as a single place)
+        user_score = user_row[0]
+        user_rank = next(
+            filter(
+                lambda row: row[1][0] == user_score, enumerate(guild_standings, start=1)
+            )
+        )[0]
+
+        await ctx.send(
+            f"{user.name} is in **{self.make_ordinal(user_rank)} place** with **{user_score}** points."
+        )
+
+    def make_ordinal(self, n):
+        """
+        Convert an integer into its ordinal representation::
+
+            make_ordinal(0)   => '0th'
+            make_ordinal(3)   => '3rd'
+            make_ordinal(122) => '122nd'
+            make_ordinal(213) => '213th'
+
+        (taken from https://stackoverflow.com/a/50992575)
+        """
+        n = int(n)
+        suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
+        if 11 <= (n % 100) <= 13:
+            suffix = "th"
+        return str(n) + suffix
+
 
 def setup(bot):
     bot.add_cog(ScoresCog(bot))
