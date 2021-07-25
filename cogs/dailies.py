@@ -3,6 +3,7 @@ import datetime
 import logging
 
 import aiosqlite
+import discord
 from discord.ext import commands, tasks
 from discord_slash import cog_ext
 from discord_slash.model import SlashCommandOptionType as OptionType
@@ -46,7 +47,10 @@ class ChannelDailyCog(commands.Cog):
         ],
     )
     async def daily_create(self, ctx: SlashContext, channel, bonus=1, attachment=False):
-        # Note: "channel" is a `discord.channel.TextChannel`
+        if not isinstance(channel, discord.TextChannel):
+            return await ctx.send(
+                "Please supply a text channel, not a voice channel or category!"
+            )
 
         async with aiosqlite.connect("dailies.db") as dailies:
             # Add entry in guild table (create if doesn't exist?) with increment
