@@ -6,7 +6,7 @@ from discord.ext import commands
 from discord_slash import cog_ext
 from discord_slash.model import SlashCommandOptionType as OptionType
 from discord_slash.context import SlashContext
-from discord_slash.utils.manage_commands import create_option
+from discord_slash.utils.manage_commands import create_option, create_choice
 
 from .guild_ids import GUILD_IDS
 
@@ -102,8 +102,8 @@ class ScoresCog(commands.Cog):
 
     @cog_ext.cog_subcommand(
         base="score",
-        name="set",
-        description="Set a user's score to a specific value.",
+        name="modify",
+        description="Set a user's score to a specific value, or add/subtract from it.",
         guild_ids=GUILD_IDS,
         options=[
             create_option(
@@ -114,30 +114,54 @@ class ScoresCog(commands.Cog):
             ),
             create_option(
                 name="amount",
-                description="The user's new score.",
+                description="The new score, or increment/decrement (negative) amount if mode is modify.",
                 option_type=OptionType.INTEGER,
                 required=True,
             ),
+            create_option(
+                name="mode",
+                description="Whether to directly set or add to/subtract from a user's score (default set).",
+                option_type=OptionType.STRING,
+                required=False,
+                choices=[
+                    create_choice(value="set", name="Set user's score"),
+                    create_choice(
+                        value="modify", name="Increment/decrement user's score"
+                    ),
+                ],
+            ),
         ],
     )
-    async def score_set(self, ctx: SlashContext, amount, user):
+    async def score_modify(self, ctx: SlashContext, user, amount, mode="set"):
         # Bots are ignored for score purposes
         if user.bot:
             return await ctx.send(f"{user.name} is a bot and cannot get points.")
 
         # Update user's score in database, or add it if it doesn't exist
         async with aiosqlite.connect("scores.db") as scores:
+            if mode == "modify":
+                async with scores.execute(
+                    f"SELECT score FROM guild_{ctx.guild_id} WHERE user = ?", (user.id,)
+                ) as user_cursor:
+                    user_row = await user_cursor.fetchone()
+
+                old_score = user_row[0] or 0
+                new_score = old_score + amount
+
+            else:
+                new_score = amount
+
             await scores.execute(
                 f"INSERT INTO guild_{ctx.guild_id}(user, score) VALUES(?, ?) ON CONFLICT(user) DO UPDATE SET score = ?",
                 (
                     user.id,
-                    amount,
-                    amount,
+                    new_score,
+                    new_score,
                 ),
             )
             await scores.commit()
 
-        await ctx.send(f"Successfully updated {user.name}'s score to **{amount}**!")
+        await ctx.send(f"Successfully updated {user.name}'s score to **{new_score}**!")
 
     def make_ordinal(self, n):
         """

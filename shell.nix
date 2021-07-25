@@ -8,9 +8,10 @@ pkgs.mkShell {
     python39Packages.toml
     python39Packages.aiosqlite
 
-    # TODO: Figure out how to install discord-py-slash-command
-
     # For formatting
     python39Packages.black
+
+    # Just for statistics
+    scc
   ];
 }
