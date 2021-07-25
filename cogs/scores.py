@@ -100,6 +100,45 @@ class ScoresCog(commands.Cog):
             f"{user.name} is in **{self.make_ordinal(user_rank)} place** with **{user_score}** points."
         )
 
+    @cog_ext.cog_subcommand(
+        base="score",
+        name="set",
+        description="Set a user's score to a specific value.",
+        guild_ids=GUILD_IDS,
+        options=[
+            create_option(
+                name="user",
+                description="The user whose score to set.",
+                option_type=OptionType.USER,
+                required=True,
+            ),
+            create_option(
+                name="amount",
+                description="The user's new score.",
+                option_type=OptionType.INTEGER,
+                required=True,
+            ),
+        ],
+    )
+    async def score_set(self, ctx: SlashContext, amount, user):
+        # Bots are ignored for score purposes
+        if user.bot:
+            return await ctx.send(f"{user.name} is a bot and cannot get points.")
+
+        # Update user's score in database, or add it if it doesn't exist
+        async with aiosqlite.connect("scores.db") as scores:
+            await scores.execute(
+                f"INSERT INTO guild_{ctx.guild_id}(user, score) VALUES(?, ?) ON CONFLICT(user) DO UPDATE SET score = ?",
+                (
+                    user.id,
+                    amount,
+                    amount,
+                ),
+            )
+            await scores.commit()
+
+        await ctx.send(f"Successfully updated {user.name}'s score to **{amount}**!")
+
     def make_ordinal(self, n):
         """
         Convert an integer into its ordinal representation::
