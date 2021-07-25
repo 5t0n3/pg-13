@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 from discord_slash import SlashCommand
 import toml
@@ -10,8 +11,14 @@ class PG13Bot(commands.Bot):
     def __init__(self, config_path, logger):
         self.config = toml.load(config_path)
 
-        super().__init__(command_prefix=self.config["commands"]["prefix"])
-        self.guild_ids = self.config["commands"]["guilds"]
+        # Choose only necessary intents
+        bot_intents = discord.Intents(
+            guild_messages=True, voice_states=True, guilds=True, members=True
+        )
+
+        super().__init__(
+            command_prefix=self.config["commands"]["prefix"], intents=bot_intents
+        )
         self.logger = logger
 
         # Initialize slash commands
