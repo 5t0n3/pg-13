@@ -37,7 +37,7 @@ class ChannelDailyCog(commands.Cog):
             ),
             create_option(
                 name="attachment",
-                description="Whether an attachment (e.g. image) is necessary to get the bonus (default false).",
+                description="Whether an attachment (e.g. image or link) is necessary to get the bonus (default false).",
                 option_type=OptionType.BOOLEAN,
                 required=False,
             ),
@@ -78,75 +78,83 @@ class ChannelDailyCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        # Give user daily bonus if applicable
-        async with aiosqlite.connect("dailies.db") as dailies:
-            # Check if guild has dailies
-            guild_table = await dailies.execute(
-                f"SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'guild_{message.guild.id}'"
-            )
-            has_dailies = await guild_table.fetchone()
+        if message.author.bot:
+            self.logger.info(f"Message {message.id} was a bot message")
 
-            if has_dailies is not None:
-                # Check if message's channel has a daily bonus
-                channel_request = await dailies.execute(
-                    f"SELECT increment, attachment FROM guild_{message.guild.id} WHERE channel = ?",
-                    (message.channel.id,),
+        else:
+            # Give user daily bonus if applicable
+            async with aiosqlite.connect("dailies.db") as dailies:
+                # Check if guild has dailies
+                guild_table = await dailies.execute(
+                    f"SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'guild_{message.guild.id}'"
                 )
-                channel_bonus = await channel_request.fetchone()
+                has_dailies = await guild_table.fetchone()
 
-                if channel_bonus is not None:
-                    claim_request = await dailies.execute(
-                        f"SELECT claimed FROM channel_{message.channel.id} WHERE user = ?",
-                        (message.author.id,),
+                if has_dailies is not None:
+                    # Check if message's channel has a daily bonus
+                    channel_request = await dailies.execute(
+                        f"SELECT increment, attachment FROM guild_{message.guild.id} WHERE channel = ?",
+                        (message.channel.id,),
                     )
-                    claimed_today = await claim_request.fetchone()
+                    channel_bonus = await channel_request.fetchone()
 
-                    # Check for message attachment if required
-                    if channel_bonus[1] and not message.attachments:
-                        self.logger.info(
-                            f"User {message.author.id} didn't provide necessary attachment"
+                    if channel_bonus is not None:
+                        claim_request = await dailies.execute(
+                            f"SELECT claimed FROM channel_{message.channel.id} WHERE user = ?",
+                            (message.author.id,),
                         )
+                        claimed_today = await claim_request.fetchone()
 
-                    # Bonus not claimed and attachment(s) supplied if necessary
-                    elif claimed_today is None:
-                        async with aiosqlite.connect("scores.db") as scores:
-                            # Fetch user score or default to (a row containing) 0
-                            score_request = await scores.execute(
-                                f"SELECT score FROM guild_{message.guild.id} WHERE user = ?",
-                                (message.author.id,),
-                            )
-                            current_score = await score_request.fetchone()
-
-                            # Update user's score
-                            new_score = (current_score or (0,))[0] + channel_bonus[0]
-                            await scores.execute(
-                                f"INSERT INTO guild_{message.guild.id}(user, score) VALUES(?, ?) ON CONFLICT(user) DO UPDATE SET score = ?",
-                                (
-                                    message.author.id,
-                                    new_score,
-                                    new_score,
-                                ),
-                            )
-
-                            await scores.commit()
+                        # Check for message attachment if required
+                        if channel_bonus[1] and not (
+                            message.attachments or message.embeds
+                        ):
                             self.logger.info(
-                                f"Successfully updated score of user {message.author.id} to {new_score}"
+                                f"User {message.author.id} didn't provide necessary attachment/embeds"
                             )
 
-                        # Updated daily claimed table
-                        await dailies.execute(
-                            f"INSERT INTO channel_{message.channel.id}(user, claimed) VALUES(?, ?)",
-                            (message.author.id, True),
-                        )
-                        await dailies.commit()
-                        self.logger.info(
-                            f"Added user to claimed table: {message.author.id}"
-                        )
+                        # Bonus not claimed and attachment(s) supplied if necessary
+                        elif claimed_today is None:
+                            async with aiosqlite.connect("scores.db") as scores:
+                                # Fetch user score or default to (a row containing) 0
+                                score_request = await scores.execute(
+                                    f"SELECT score FROM guild_{message.guild.id} WHERE user = ?",
+                                    (message.author.id,),
+                                )
+                                current_score = await score_request.fetchone()
 
-                    else:
-                        self.logger.info(
-                            f"User {message.author.id} already claimed daily"
-                        )
+                                # Update user's score
+                                new_score = (current_score or (0,))[0] + channel_bonus[
+                                    0
+                                ]
+                                await scores.execute(
+                                    f"INSERT INTO guild_{message.guild.id}(user, score) VALUES(?, ?) ON CONFLICT(user) DO UPDATE SET score = ?",
+                                    (
+                                        message.author.id,
+                                        new_score,
+                                        new_score,
+                                    ),
+                                )
+
+                                await scores.commit()
+                                self.logger.info(
+                                    f"Successfully updated score of user {message.author.id} to {new_score}"
+                                )
+
+                            # Updated daily claimed table
+                            await dailies.execute(
+                                f"INSERT INTO channel_{message.channel.id}(user, claimed) VALUES(?, ?)",
+                                (message.author.id, True),
+                            )
+                            await dailies.commit()
+                            self.logger.info(
+                                f"Added user to claimed table: {message.author.id}"
+                            )
+
+                        else:
+                            self.logger.info(
+                                f"User {message.author.id} already claimed daily"
+                            )
 
         await self.bot.process_commands(message)
 
