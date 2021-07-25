@@ -103,7 +103,7 @@ class ScoresCog(commands.Cog):
     @cog_ext.cog_subcommand(
         base="score",
         name="modify",
-        description="Set a user's score to a specific value, or add/subtract from it.",
+        description="Set a user's score to a specific value, or give/take points from them.",
         guild_ids=GUILD_IDS,
         options=[
             create_option(
@@ -114,13 +114,13 @@ class ScoresCog(commands.Cog):
             ),
             create_option(
                 name="amount",
-                description="The new score, or increment/decrement (negative) amount if mode is modify.",
+                description="The new score, or the number of points to give (+) or take (-) from a user.",
                 option_type=OptionType.INTEGER,
                 required=True,
             ),
             create_option(
                 name="mode",
-                description="Whether to directly set or add to/subtract from a user's score (default set).",
+                description="Whether to directly set or give/take points from a user's score (default set).",
                 option_type=OptionType.STRING,
                 required=False,
                 choices=[
