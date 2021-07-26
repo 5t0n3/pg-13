@@ -28,7 +28,7 @@ class ScoresCog(commands.Cog):
                 )
 
             await scores.commit()
-            self.logger.info("Successfully initialized all guild score tables.")
+        self.logger.info("Successfully initialized all guild score tables.")
 
     @cog_ext.cog_slash(
         name="leaderboard",
