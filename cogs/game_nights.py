@@ -20,7 +20,7 @@ class GameNightCog(commands.Cog):
         await self.init_gamenight_tables()
 
     async def init_gamenight_tables(self):
-        async with aiosqlite.connect("gamenights.db") as gamenights:
+        async with aiosqlite.connect("databases/gamenights.db") as gamenights:
             for guild in self.bot.guilds:
                 await gamenights.execute(
                     f"CREATE TABLE IF NOT EXISTS guild_{guild.id}(channel INT PRIMARY KEY, host INT UNIQUE, start_channel INT)"
@@ -50,7 +50,7 @@ class GameNightCog(commands.Cog):
         gamenight_channel = voice_state.channel
         gamenight_starttime = datetime.datetime.now().isoformat()
 
-        async with aiosqlite.connect("gamenights.db") as gamenights:
+        async with aiosqlite.connect("databases/gamenights.db") as gamenights:
             # Add host/voice channel to guild game night table
             await gamenights.execute(
                 f"INSERT INTO guild_{ctx.guild_id} VALUES(?, ?, ?)",

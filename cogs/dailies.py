@@ -52,7 +52,7 @@ class ChannelDailyCog(commands.Cog):
                 "Please supply a text channel, not a voice channel or category!"
             )
 
-        async with aiosqlite.connect("dailies.db") as dailies:
+        async with aiosqlite.connect("databases/dailies.db") as dailies:
             # Add entry in guild table (create if doesn't exist?) with increment
             await dailies.execute(
                 f"CREATE TABLE IF NOT EXISTS guild_{ctx.guild_id}(channel INT PRIMARY KEY, increment INT, attachment BOOLEAN)",
@@ -89,7 +89,7 @@ class ChannelDailyCog(commands.Cog):
 
         else:
             # Give user daily bonus if applicable
-            async with aiosqlite.connect("dailies.db") as dailies:
+            async with aiosqlite.connect("databases/dailies.db") as dailies:
                 # Check if guild has dailies
                 guild_table = await dailies.execute(
                     f"SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'guild_{message.guild.id}'"
@@ -170,7 +170,7 @@ class ChannelDailyCog(commands.Cog):
 
     @tasks.loop(hours=24)
     async def clear_daily_claims(self):
-        async with aiosqlite.connect("dailies.db") as dailies:
+        async with aiosqlite.connect("databases/dailies.db") as dailies:
             tables = await dailies.execute_fetchall(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )

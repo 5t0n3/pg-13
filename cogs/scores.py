@@ -21,7 +21,7 @@ class ScoresCog(commands.Cog):
         await self.init_guild_scores()
 
     async def init_guild_scores(self):
-        async with aiosqlite.connect("scores.db") as scores:
+        async with aiosqlite.connect("databases/scores.db") as scores:
             for guild in self.bot.guilds:
                 await scores.execute(
                     f"CREATE TABLE IF NOT EXISTS guild_{guild.id}(user INT PRIMARY KEY, score INT)"
@@ -37,7 +37,7 @@ class ScoresCog(commands.Cog):
     )
     async def leaderboard(self, ctx: SlashContext):
         # Fetch top 10 guild scores
-        async with aiosqlite.connect("scores.db") as scores:
+        async with aiosqlite.connect("databases/scores.db") as scores:
             user_scores = await scores.execute_fetchall(
                 f"SELECT * FROM guild_{ctx.guild_id} ORDER BY score DESC LIMIT 10"
             )
@@ -73,7 +73,7 @@ class ScoresCog(commands.Cog):
 
         # TODO: Implement caching of guild leaderboards
         # Get guild & user's score(s) for standings comparison
-        async with aiosqlite.connect("scores.db") as scores:
+        async with aiosqlite.connect("databases/scores.db") as scores:
             guild_standings = await scores.execute_fetchall(
                 f"SELECT DISTINCT score FROM guild_{ctx.guild_id} ORDER BY score DESC"
             )
@@ -138,7 +138,7 @@ class ScoresCog(commands.Cog):
             return await ctx.send(f"{user.name} is a bot and cannot get points.")
 
         # Update user's score in database, or add it if it doesn't exist
-        async with aiosqlite.connect("scores.db") as scores:
+        async with aiosqlite.connect("databases/scores.db") as scores:
             if mode == "modify":
                 async with scores.execute(
                     f"SELECT score FROM guild_{ctx.guild_id} WHERE user = ?", (user.id,)

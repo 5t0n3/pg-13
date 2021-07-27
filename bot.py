@@ -1,4 +1,5 @@
 import logging
+import pathlib
 
 import discord
 from discord.ext import commands
@@ -24,6 +25,11 @@ class PG13Bot(commands.Bot):
 
         # Initialize slash commands
         self.slash = SlashCommand(self, sync_commands=True)
+
+        # Ensure database folder exists
+        db_path = pathlib.Path("databases/")
+        if not db_path.exists():
+            db_path.mkdir()
 
         # Load cogs
         cogs = ["cogs.scores", "cogs.dailies", "cogs.game_nights"]
