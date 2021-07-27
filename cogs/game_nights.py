@@ -23,7 +23,8 @@ class GameNightCog(commands.Cog):
         async with aiosqlite.connect("databases/gamenights.db") as gamenights:
             for guild in self.bot.guilds:
                 await gamenights.execute(
-                    f"CREATE TABLE IF NOT EXISTS guild_{guild.id}(channel INT PRIMARY KEY, host INT UNIQUE, start_channel INT)"
+                    f"CREATE TABLE IF NOT EXISTS guild_{guild.id}"
+                    "(voice_channel INT PRIMARY KEY, host INT UNIQUE, start_channel INT)"
                 )
 
             await gamenights.commit()
@@ -31,7 +32,64 @@ class GameNightCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        pass
+        # TODO: Add logging to this event listener
+        # Ignore bots (e.g. Rythm/Groovy)
+        if member.bot:
+            return
+
+        # Ignore if a user mutes/deafens
+        if before.channel == after.channel:
+            return
+
+        # Check if user's current/previous voice channel had ongoing game night(s)
+        async with aiosqlite.connect("databases/gamenights.db") as gamenights:
+            before_request = await gamenights.execute(
+                f"SELECT * FROM guild_{member.guild.id} WHERE voice_channel = ?",
+                (before.channel,),
+            )
+            before_had_gamenight = await before_request.fetchone()
+
+            after_request = await gamenights.execute(
+                f"SELECT * FROM guild_{member.guild.id} WHERE voice_channel = ?",
+                (after.channel,),
+            )
+            after_had_gamenight = await after_request.fetchone()
+
+        # User left a game night channel
+        if before_had_gamenight is not None:
+            async with aiosqlite.connect("databases/gamenights.db") as gamenights:
+                # Note: user theoretically guaranteed to have row in game night table
+                join_request = await gamenights.execute(
+                    f"SELECT last_join FROM gamenight_{before.channel} WHERE user = ?",
+                    (member.id,),
+                )
+                join_timestamp = await join_request.fetchone()
+                minutes_spent = (
+                    datetime.datetime.now()
+                    - datetime.datetime.fromisoformat(join_timestamp)
+                ).minutes
+
+                # Update minutes spent in game night
+                await gamenights.execute(
+                    f"UPDATE gamenight_{before.channel} SET minutes = minutes + ? WHERE user = ?",
+                    (minutes_spent, member.id),
+                )
+
+                await gamenights.commit()
+
+        # User joined a game night channel
+        if after_has_gamenight is not None:
+            join_time = datetime.datetime.now().isoformat()
+
+            # Update user's last_join timestamp
+            async with aiosqlite.connect("databases/gamenights.db") as gamenights:
+                await gamenights.execute(
+                    f"INSERT INTO gamenight_{after.channel} VALUES(?, ?, 0)"
+                    "ON CONFLICT(user) DO UPDATE SET last_join = ?",
+                    (member.id, join_time, join_time),
+                )
+
+                await gamenights.commit()
 
     @cog_ext.cog_subcommand(
         base="gamenight",
@@ -59,8 +117,8 @@ class GameNightCog(commands.Cog):
 
             # Initialize game-night-specific table
             await gamenights.execute(
-                f"""CREATE TABLE gamenight_{gamenight_channel.id}
-                    (user INT PRIMARY KEY, last_join DATETIME, minutes INT)"""
+                f"CREATE TABLE gamenight_{gamenight_channel.id}"
+                "(user INT PRIMARY KEY, last_join DATETIME, minutes INT)"
             )
 
             # Add all users in call to newly-created table
@@ -74,10 +132,8 @@ class GameNightCog(commands.Cog):
 
         await ctx.send(f"Started game night in voice channel {gamenight_channel.name}!")
         self.logger.info(
-            (
-                f"Successfully started game night in channel {gamenight_channel.id} "
-                f"with {len(gamenight_channel.members)} users"
-            )
+            f"Successfully started game night in channel {gamenight_channel.id} "
+            f"with {len(gamenight_channel.members)} users"
         )
 
 
