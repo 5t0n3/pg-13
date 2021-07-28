@@ -202,6 +202,8 @@ class GameNightCog(commands.Cog):
             f"with {len(gamenight_channel.members)} initial users"
         )
 
+    # TODO: Add "/gamenight config" command for setting/deleting score thresholds
+
 
 def setup(bot):
     bot.add_cog(GameNightCog(bot))

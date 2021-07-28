@@ -23,6 +23,7 @@ class ScoresCog(commands.Cog):
     async def init_guild_scores(self):
         async with aiosqlite.connect("databases/scores.db") as scores:
             for guild in self.bot.guilds:
+                # TODO: Split score into cumulative/current scores
                 await scores.execute(
                     f"CREATE TABLE IF NOT EXISTS guild_{guild.id}(user INT PRIMARY KEY, score INT)"
                 )
@@ -100,6 +101,7 @@ class ScoresCog(commands.Cog):
             f"{user.name} is in **{self.make_ordinal(user_rank)} place** with **{user_score}** points."
         )
 
+    # TODO: Split into 2 commands: set & something for giving/taking points (flag for which one)
     @cog_ext.cog_subcommand(
         base="score",
         name="modify",

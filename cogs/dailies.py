@@ -119,7 +119,9 @@ class ChannelDailyCog(commands.Cog):
 
                         # Bonus not claimed and attachment(s) supplied if necessary
                         elif claimed_today is None:
-                            async with aiosqlite.connect("scores.db") as scores:
+                            async with aiosqlite.connect(
+                                "databases/scores.db"
+                            ) as scores:
                                 # Fetch user score or default to (a row containing) 0
                                 score_request = await scores.execute(
                                     f"SELECT score FROM guild_{message.guild.id} WHERE user = ?",
@@ -132,7 +134,8 @@ class ChannelDailyCog(commands.Cog):
                                     0
                                 ]
                                 await scores.execute(
-                                    f"INSERT INTO guild_{message.guild.id}(user, score) VALUES(?, ?) ON CONFLICT(user) DO UPDATE SET score = ?",
+                                    f"INSERT INTO guild_{message.guild.id}(user, score) VALUES(?, ?) "
+                                    "ON CONFLICT(user) DO UPDATE SET score = ?",
                                     (
                                         message.author.id,
                                         new_score,
