@@ -77,6 +77,9 @@ class GameNightCog(commands.Cog):
 
                 await gamenights.commit()
 
+            self.logger.info(f"User {member.name} left channel {before.channel.name}")
+            # TODO: Automatically end game night if no one is left in the channel on leave
+
         # User joined a game night channel
         if after_has_gamenight is not None:
             join_time = datetime.datetime.now().isoformat()
@@ -90,6 +93,8 @@ class GameNightCog(commands.Cog):
                 )
 
                 await gamenights.commit()
+
+            self.logger.info(f"User {member.name} joined channel {after.channel.name}")
 
     @cog_ext.cog_subcommand(
         base="gamenight",
@@ -132,8 +137,8 @@ class GameNightCog(commands.Cog):
 
         await ctx.send(f"Started game night in voice channel {gamenight_channel.name}!")
         self.logger.info(
-            f"Successfully started game night in channel {gamenight_channel.id} "
-            f"with {len(gamenight_channel.members)} users"
+            f"Successfully started game night in channel {gamenight_channel.name} "
+            f"with {len(gamenight_channel.members)} initial users"
         )
 
 

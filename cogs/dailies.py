@@ -14,8 +14,6 @@ from .guild_ids import GUILD_IDS
 
 
 class ChannelDailyCog(commands.Cog):
-    GUILDS = [745332731184939039]
-
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.dailies")
@@ -116,7 +114,7 @@ class ChannelDailyCog(commands.Cog):
                             message.attachments or message.embeds
                         ):
                             self.logger.info(
-                                f"User {message.author.id} didn't provide necessary attachment/embeds"
+                                f"User {message.author.name} didn't provide necessary attachment/embeds"
                             )
 
                         # Bonus not claimed and attachment(s) supplied if necessary
@@ -144,7 +142,7 @@ class ChannelDailyCog(commands.Cog):
 
                                 await scores.commit()
                                 self.logger.info(
-                                    f"Successfully updated score of user {message.author.id} to {new_score}"
+                                    f"Successfully updated score of user {message.author.name} to {new_score}"
                                 )
 
                             # Updated daily claimed table
@@ -154,12 +152,12 @@ class ChannelDailyCog(commands.Cog):
                             )
                             await dailies.commit()
                             self.logger.info(
-                                f"Added user to claimed table: {message.author.id}"
+                                f"Added user {message.author.name} to claimed table for {message.channel.name}"
                             )
 
                         else:
                             self.logger.info(
-                                f"User {message.author.id} already claimed daily"
+                                f"User {message.author.name} already claimed daily"
                             )
 
         await self.bot.process_commands(message)
