@@ -124,28 +124,15 @@ class ChannelDailyCog(commands.Cog):
                             ) as scores:
                                 # Fetch user score or default to (a row containing) 0
                                 score_request = await scores.execute(
-                                    f"SELECT score FROM guild_{message.guild.id} WHERE user = ?",
+                                    f"SELECT current FROM guild_{message.guild.id} WHERE user = ?",
                                     (message.author.id,),
                                 )
                                 current_score = await score_request.fetchone()
 
-                                # Update user's score
-                                new_score = (current_score or (0,))[0] + channel_bonus[
-                                    0
-                                ]
-                                await scores.execute(
-                                    f"INSERT INTO guild_{message.guild.id}(user, score) VALUES(?, ?) "
-                                    "ON CONFLICT(user) DO UPDATE SET score = ?",
-                                    (
-                                        message.author.id,
-                                        new_score,
-                                        new_score,
-                                    ),
-                                )
-
-                                await scores.commit()
-                                self.logger.info(
-                                    f"Successfully updated score of user {message.author.name} to {new_score}"
+                                # Update both cumulative & current scores
+                                score_cog = self.bot.get_cog("ScoresCog")
+                                await score_cog.update_scores(
+                                    message.author, channel_bonus[0], adjust=True
                                 )
 
                             # Updated daily claimed table
@@ -154,6 +141,7 @@ class ChannelDailyCog(commands.Cog):
                                 (message.author.id, True),
                             )
                             await dailies.commit()
+
                             self.logger.info(
                                 f"Added user {message.author.name} to claimed table for {message.channel.name}"
                             )
@@ -172,6 +160,7 @@ class ChannelDailyCog(commands.Cog):
     @tasks.loop(hours=24)
     async def clear_daily_claims(self):
         async with aiosqlite.connect("databases/dailies.db") as dailies:
+            # TODO: use guild table instead of sqlite_master
             tables = await dailies.execute_fetchall(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )
