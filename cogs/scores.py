@@ -99,14 +99,24 @@ class ScoresCog(commands.Cog):
         guild_ids=GUILD_IDS,
         options=[
             create_option(
+                name="score_type",
+                description="Which score to rank the user based on (default cumulative).",
+                option_type=OptionType.STRING,
+                required=False,
+                choices=[
+                    create_choice(value="cumulative", name="Cumulative score"),
+                    create_choice(value="current", name="Current score"),
+                ],
+            ),
+            create_option(
                 name="user",
                 description="The user to display the rank of (default you).",
                 option_type=OptionType.USER,
                 required=False,
-            )
+            ),
         ],
     )
-    async def rank(self, ctx: SlashContext, user=None):
+    async def rank(self, ctx: SlashContext, score_type="cumulative", user=None):
         if user is None:
             user = ctx.author
 
@@ -114,11 +124,11 @@ class ScoresCog(commands.Cog):
         # Get guild & user's score(s) for standings comparison
         async with aiosqlite.connect("databases/scores.db") as scores:
             guild_standings = await scores.execute_fetchall(
-                f"SELECT DISTINCT current FROM guild_{ctx.guild_id} ORDER BY current DESC"
+                f"SELECT DISTINCT {score_type} FROM guild_{ctx.guild_id} ORDER BY {score_type} DESC"
             )
 
             user_request = await scores.execute(
-                f"SELECT current FROM guild_{ctx.guild_id} WHERE user = ?",
+                f"SELECT {score_type} FROM guild_{ctx.guild_id} WHERE user = ?",
                 (user.id,),
             )
             user_row = await user_request.fetchone()
@@ -127,8 +137,10 @@ class ScoresCog(commands.Cog):
         if user_row is None:
             return await ctx.send("That user doesn't have any points yet!")
 
-        # Fetch user's place (treating ties as a single place)
+        # Rank by correct score
         user_score = user_row[0]
+
+        # Fetch user's place (treating ties as a single place)
         user_rank = next(
             filter(
                 lambda row: row[1][0] == user_score, enumerate(guild_standings, start=1)
@@ -136,7 +148,7 @@ class ScoresCog(commands.Cog):
         )[0]
 
         await ctx.send(
-            f"{user.name} is in **{self.make_ordinal(user_rank)} place** with **{user_score}** points."
+            f"{user.name} is in **{self.make_ordinal(user_rank)} place** with **{user_score}** ({score_type}) points."
         )
 
     # TODO: Split into 2 commands: set & something for giving/taking points (flag for which one)
