@@ -266,6 +266,7 @@ class ScoresCog(commands.Cog):
 
             await scores.commit()
 
+        # TODO: Also log cumulative score?
         self.logger.info(f"Updated {member.name}'s current score to {new_score}")
 
     def make_ordinal(self, n):

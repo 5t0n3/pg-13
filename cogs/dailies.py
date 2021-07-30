@@ -18,6 +18,18 @@ class ChannelDailyCog(commands.Cog):
         self.bot = bot
         self.logger = logging.getLogger("pg13.dailies")
 
+    async def init_guild_daily_tables(self):
+        async with aiosqlite.connect("databases/dailies.db") as dailies:
+            for guild in self.bot.guilds:
+                await dailies.execute(
+                    f"CREATE TABLE IF NOT EXISTS guild_{guild.id}"
+                    "(channel INT PRIMARY KEY, bonus INT, attachment BOOLEAN)",
+                )
+
+            await dailies.commit()
+
+        self.logger.info("Successfully initialized all guild daily tables.")
+
     @cog_ext.cog_subcommand(
         base="daily",
         name="create",
@@ -51,22 +63,19 @@ class ChannelDailyCog(commands.Cog):
             )
 
         async with aiosqlite.connect("databases/dailies.db") as dailies:
-            # Add entry in guild table (create if doesn't exist?) with increment
-            await dailies.execute(
-                f"CREATE TABLE IF NOT EXISTS guild_{ctx.guild_id}(channel INT PRIMARY KEY, increment INT, attachment BOOLEAN)",
-            )
+            # Ensure channel doesn't already have a daily bonus
             exists_request = await dailies.execute(
                 f"SELECT * FROM guild_{ctx.guild_id} WHERE channel = ?", (channel.id,)
             )
             entry_exists = await exists_request.fetchone()
 
-            if entry_exists:
+            if entry_exists is not None:
                 return await ctx.send(f"#{channel} already has a daily point reward!")
 
             else:
-                # Update guild table with increment
+                # Update guild table with bonus
                 await dailies.execute(
-                    f"INSERT INTO guild_{ctx.guild_id} (channel, increment, attachment) VALUES (?, ?, ?)",
+                    f"INSERT INTO guild_{ctx.guild_id} VALUES (?, ?, ?)",
                     (channel.id, bonus, attachment),
                 )
 
@@ -88,87 +97,72 @@ class ChannelDailyCog(commands.Cog):
         else:
             # Give user daily bonus if applicable
             async with aiosqlite.connect("databases/dailies.db") as dailies:
-                # Check if guild has dailies
-                guild_table = await dailies.execute(
-                    f"SELECT * FROM sqlite_master WHERE type = 'table' AND name = 'guild_{message.guild.id}'"
+                # Check if message's channel has a daily bonus
+                channel_request = await dailies.execute(
+                    f"SELECT bonus, attachment FROM guild_{message.guild.id} WHERE channel = ?",
+                    (message.channel.id,),
                 )
-                has_dailies = await guild_table.fetchone()
+                channel_bonus = await channel_request.fetchone()
 
-                if has_dailies is not None:
-                    # Check if message's channel has a daily bonus
-                    channel_request = await dailies.execute(
-                        f"SELECT increment, attachment FROM guild_{message.guild.id} WHERE channel = ?",
-                        (message.channel.id,),
+                if channel_bonus is not None:
+                    claim_request = await dailies.execute(
+                        f"SELECT claimed FROM channel_{message.channel.id} WHERE user = ?",
+                        (message.author.id,),
                     )
-                    channel_bonus = await channel_request.fetchone()
+                    claimed_today = await claim_request.fetchone()
 
-                    if channel_bonus is not None:
-                        claim_request = await dailies.execute(
-                            f"SELECT claimed FROM channel_{message.channel.id} WHERE user = ?",
-                            (message.author.id,),
+                    # Check for message attachment if required
+                    if channel_bonus[1] and not (message.attachments or message.embeds):
+                        self.logger.info(
+                            f"User {message.author.name} didn't provide necessary attachment/embeds"
                         )
-                        claimed_today = await claim_request.fetchone()
 
-                        # Check for message attachment if required
-                        if channel_bonus[1] and not (
-                            message.attachments or message.embeds
-                        ):
-                            self.logger.info(
-                                f"User {message.author.name} didn't provide necessary attachment/embeds"
+                    # Bonus not claimed and attachment(s) supplied if necessary
+                    elif claimed_today is None:
+                        # Update both cumulative & current scores
+                        score_cog = self.bot.get_cog("ScoresCog")
+
+                        if score_cog is not None:
+                            await score_cog.update_scores(
+                                message.author, channel_bonus[0], adjust=True
                             )
 
-                        # Bonus not claimed and attachment(s) supplied if necessary
-                        elif claimed_today is None:
-                            async with aiosqlite.connect(
-                                "databases/scores.db"
-                            ) as scores:
-                                # Fetch user score or default to (a row containing) 0
-                                score_request = await scores.execute(
-                                    f"SELECT current FROM guild_{message.guild.id} WHERE user = ?",
-                                    (message.author.id,),
-                                )
-                                current_score = await score_request.fetchone()
+                        # Updated daily claimed table
+                        await dailies.execute(
+                            f"INSERT INTO channel_{message.channel.id} VALUES(?, ?)",
+                            (message.author.id, True),
+                        )
+                        await dailies.commit()
 
-                                # Update both cumulative & current scores
-                                score_cog = self.bot.get_cog("ScoresCog")
-                                await score_cog.update_scores(
-                                    message.author, channel_bonus[0], adjust=True
-                                )
+                        self.logger.info(
+                            f"Added user {message.author.name} to claimed table for {message.channel.name}"
+                        )
 
-                            # Updated daily claimed table
-                            await dailies.execute(
-                                f"INSERT INTO channel_{message.channel.id}(user, claimed) VALUES(?, ?)",
-                                (message.author.id, True),
-                            )
-                            await dailies.commit()
-
-                            self.logger.info(
-                                f"Added user {message.author.name} to claimed table for {message.channel.name}"
-                            )
-
-                        else:
-                            self.logger.info(
-                                f"User {message.author.name} already claimed daily"
-                            )
+                    else:
+                        self.logger.info(
+                            f"User {message.author.name} already claimed daily"
+                        )
 
         await self.bot.process_commands(message)
 
     @commands.Cog.listener()
     async def on_ready(self):
+        # Initialize daily tables
+        await self.init_guild_daily_tables()
+
+        # Schedule clearing of daily tables
         self.clear_daily_claims.start()
 
     @tasks.loop(hours=24)
     async def clear_daily_claims(self):
         async with aiosqlite.connect("databases/dailies.db") as dailies:
-            # TODO: use guild table instead of sqlite_master
-            tables = await dailies.execute_fetchall(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            )
-
-            # Clear (not delete) all channel tables
-            for (name,) in tables:
-                if name.startswith("channel_"):
-                    await dailies.execute(f"DELETE FROM {name}")
+            # Clear all daily claim tables in every guild the bot is in
+            for guild in self.bot.guilds:
+                async with dailies.execute(
+                    f"SELECT channel FROM guild_{guild.id}"
+                ) as channels:
+                    async for (channel_id,) in channels:
+                        await dailies.execute(f"DELETE FROM channel_{channel_id}")
 
             await dailies.commit()
 
