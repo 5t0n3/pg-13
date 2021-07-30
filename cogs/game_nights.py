@@ -117,13 +117,13 @@ class GameNightCog(commands.Cog):
 
             # Get channel command was executed from to send summary in
             summary_request = await gamenights.execute(
-                f"SELECT start_channel FROM guild_{channel.guild.id} "
+                f"SELECT start_channel, host FROM guild_{channel.guild.id} "
                 "WHERE voice_channel = ?",
                 (channel.id,),
             )
             # Theoretically guaranteed to be non-None
-            summary_id = await summary_request.fetchone()
-            summary_channel = self.bot.get_channel(summary_id[0])
+            summary_info = await summary_request.fetchone()
+            summary_channel = self.bot.get_channel(summary_info[0])
 
             # Delete game night table & entry in guild table
             await gamenights.execute(f"DROP TABLE gamenight_{channel.id}")
@@ -133,6 +133,12 @@ class GameNightCog(commands.Cog):
             )
 
             await gamenights.commit()
+
+        # Give the host 17 points for hosting
+        scores = self.bot.get_cog("ScoresCog")
+        if scores is not None:
+            host = channel.guild.get_member(summary_info[1])
+            await scores.update_scores(host, 17, adjust=True)
 
         self.logger.info(f"Cleaned up game night in channel {channel.name}")
 
