@@ -25,7 +25,8 @@ class ScoresCog(commands.Cog):
             for guild in self.bot.guilds:
                 # TODO: Split score into cumulative/current scores
                 await scores.execute(
-                    f"CREATE TABLE IF NOT EXISTS guild_{guild.id}(user INT PRIMARY KEY, current INT, cumulative INT)"
+                    f"CREATE TABLE IF NOT EXISTS "
+                    f"guild_{guild.id}(user INT PRIMARY KEY, current INT, cumulative INT)"
                 )
 
             await scores.commit()
@@ -35,26 +36,62 @@ class ScoresCog(commands.Cog):
         name="leaderboard",
         description="Display the score leaderboard for the current server.",
         guild_ids=GUILD_IDS,
-        # TODO: Add flag for displaying current or cumulative scores in leaderboard
+        options=[
+            create_option(
+                name="sort",
+                description="Which score to order users by (default cumulative)",
+                option_type=OptionType.STRING,
+                required=False,
+                choices=[
+                    create_choice(value="cumulative", name="Cumulative score"),
+                    create_choice(value="current", name="Current score"),
+                ],
+            )
+        ],
     )
-    async def leaderboard(self, ctx: SlashContext):
+    async def leaderboard(self, ctx: SlashContext, sort="cumulative"):
         # Fetch top 10 guild scores
         async with aiosqlite.connect("databases/scores.db") as scores:
             user_scores = await scores.execute_fetchall(
-                f"SELECT * FROM guild_{ctx.guild_id} ORDER BY current DESC LIMIT 10"
+                f"SELECT * FROM guild_{ctx.guild_id} ORDER BY {sort} DESC LIMIT 15"
             )
 
         guild = self.bot.get_guild(ctx.guild_id)
-        # Convert rows to leaderboard
-        formatted_leaderboard = ""
-        for place, (user_id, score, _) in enumerate(user_scores, start=1):
-            member = guild.get_member(user_id)
-            formatted_leaderboard += f"{place}: {member.mention} - {score}"
 
-        leaderboard_embed = discord.Embed(
-            title=f"{guild.name} Leaderboard", description=formatted_leaderboard
-        )
-        await ctx.send(embed=leaderboard_embed)
+        # Initialize embed
+        leaderboard = discord.Embed(title=f"{guild.name} Leaderboard", description="")
+        leaderboard.set_footer(text=f"(sorted by {sort} score)")
+
+        # Used to deal with score ties
+        place = 1
+        previous_score = None
+
+        # Convert rows to leaderboard
+        for user_id, current, cumulative in user_scores:
+            member = guild.get_member(user_id)
+
+            if sort == "cumulative":
+                if cumulative != previous_score:
+                    place_str = f"{place}:"
+                    place += 1
+                else:
+                    place_str = " "
+
+                leaderboard.description += f"{place_str} {member.mention} - {cumulative} points (current {current})\n"
+                previous_score = cumulative
+
+            # Ordered by current score
+            else:
+                if current != previous_score:
+                    place_str = f"{place}:"
+                    place += 1
+                else:
+                    place_str = " "
+
+                leaderboard.description += f"{place_str} {member.mention} - {current} points (cumulative {cumulative})\n"
+                previous_score = current
+
+        await ctx.send(embed=leaderboard)
 
     @cog_ext.cog_slash(
         name="rank",
