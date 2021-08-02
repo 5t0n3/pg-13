@@ -48,7 +48,7 @@ class GameNightCog(commands.Cog):
             if before.channel is not None:
                 before_request = await gamenights.execute(
                     f"SELECT * FROM guild_{member.guild.id} WHERE voice_channel = ?",
-                    (before.channel.id or 0,),
+                    (before.channel.id,),
                 )
                 before_had_gamenight = await before_request.fetchone()
             else:
@@ -58,7 +58,7 @@ class GameNightCog(commands.Cog):
             if after.channel is not None:
                 after_request = await gamenights.execute(
                     f"SELECT * FROM guild_{member.guild.id} WHERE voice_channel = ?",
-                    (after.channel.id or 0,),
+                    (after.channel.id,),
                 )
                 after_has_gamenight = await after_request.fetchone()
             else:
@@ -115,6 +115,9 @@ class GameNightCog(commands.Cog):
                 f"SELECT user, minutes FROM gamenight_{channel.id} ORDER BY minutes DESC"
             )
 
+            # This has to be iterated over multiple times
+            member_times = list(member_times)
+
             # Get channel command was executed from to send summary in
             summary_request = await gamenights.execute(
                 f"SELECT start_channel, host FROM guild_{channel.guild.id} "
@@ -134,9 +137,34 @@ class GameNightCog(commands.Cog):
 
             await gamenights.commit()
 
-        # Give the host 17 points for hosting
-        scores = self.bot.get_cog("ScoresCog")
-        if scores is not None:
+        # Fetch current guild thresholds, or default to None if they aren't defined
+        guild_thresholds = self.bot.guild_configs.get(str(channel.guild.id), {}).get(
+            "thresholds", None
+        )
+
+        # Convert keys to ints (TOML makes them strings by default)
+        guild_thresholds = {
+            int(minutes): bonus for minutes, bonus in guild_thresholds.items()
+        }
+
+        # Dole out bonuses to everyone that attended
+        if (scores := self.bot.get_cog("ScoresCog")) is not None:
+            # Use thresholds to give out bonuses
+            if guild_thresholds is not None:
+                for user_id, minutes in member_times:
+                    # Fetch point bonus based on time spent in game night
+                    highest = max(
+                        filter(lambda threshold: threshold <= minutes, guild_thresholds)
+                    )
+                    user_bonus = guild_thresholds[highest]
+
+                    # Fetch member associated with user id
+                    member = channel.guild.get_member(user_id)
+
+                    # Update user's score
+                    await scores.update_scores(member, user_bonus, adjust=True)
+
+            # Give the host 17 points for hosting
             host = channel.guild.get_member(summary_info[1])
             await scores.update_scores(host, 17, adjust=True)
 
