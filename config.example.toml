@@ -1,0 +1,7 @@
+token = "[your token here]"
+prefix = "[your prefix here]"
+
+# Put your guild-specific configuration(s) here
+# [guilds.guild_id]
+# thresholds = { [minutes] = [# points], ...}
+# bonus_role = [bonus role ID]
