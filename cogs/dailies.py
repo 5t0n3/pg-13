@@ -32,7 +32,7 @@ class DailyBonuses(commands.Cog):
 
     @cog_ext.cog_subcommand(
         base="daily",
-        name="create",
+        name="attach",
         description="Attach a daily reward to messages in a channel.",
         guild_ids=GUILD_IDS,
         options=[
@@ -88,6 +88,54 @@ class DailyBonuses(commands.Cog):
             await dailies.commit()
 
         await ctx.send(f"Successfully added {bonus}-point daily bonus to #{channel}!")
+
+    @cog_ext.cog_subcommand(
+        base="daily",
+        name="detach",
+        description="Remove a daily bonus from a text channel.",
+        guild_ids=GUILD_IDS,
+        options=[
+            create_option(
+                name="channel",
+                description="The channel to remove a bonus from.",
+                option_type=OptionType.CHANNEL,
+                required=True,
+            )
+        ],
+    )
+    async def daily_detach(self, ctx: SlashContext, channel):
+        # Bonuses can only be attached to text channels
+        if not isinstance(channel, discord.TextChannel):
+            self.logger.info(f"Channel {channel.name} was not a text channel")
+            return await ctx.send(
+                "Please supply a text channel, not a voice channel or category!"
+            )
+
+        async with aiosqlite.connect("databases/dailies.db") as dailies:
+            channel_request = await dailies.execute(
+                f"SELECT channel FROM guild_{ctx.guild_id} WHERE channel = ?",
+                (channel.id,),
+            )
+            channel_exists = await channel_request.fetchone()
+
+            # If the daily doesn't exist, the above query returns None
+            if channel_exists is None:
+                return await ctx.send(
+                    f"{channel.mention} doesn't have a daily bonus attached to it!"
+                )
+
+            # Delete channel's claim table & entry in guild table
+            await dailies.execute(f"DROP TABLE channel_{channel.id}")
+            await dailies.execute(
+                f"DELETE FROM guild_{ctx.guild_id} WHERE channel = ?", (channel.id,)
+            )
+
+            await dailies.commit()
+
+        await ctx.send(f"Succesfully detached daily bonus from channel {channel.name}!")
+        self.logger.info(
+            f"Succesfully detached daily bonus from channel {channel.name}"
+        )
 
     @commands.Cog.listener()
     async def on_message(self, message):
