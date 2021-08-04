@@ -138,7 +138,7 @@ class GameNights(commands.Cog):
             await gamenights.commit()
 
         # Fetch current guild thresholds, or default to None if they aren't defined
-        guild_thresholds = self.bot.guild_configs.get(str(channel.guild.id), {}).get(
+        guild_thresholds = self.bot.guild_configs[str(channel.guild.id)].get(
             "thresholds", None
         )
 
