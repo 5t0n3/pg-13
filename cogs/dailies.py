@@ -13,7 +13,7 @@ from discord_slash.utils.manage_commands import create_option
 from .guild_ids import GUILD_IDS
 
 
-class ChannelDailyCog(commands.Cog):
+class DailyBonuses(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.dailies")
@@ -120,7 +120,7 @@ class ChannelDailyCog(commands.Cog):
                     # Bonus not claimed and attachment(s) supplied if necessary
                     elif claimed_today is None:
                         # Update both cumulative & current scores
-                        score_cog = self.bot.get_cog("ScoresCog")
+                        score_cog = self.bot.get_cog("Scores")
 
                         if score_cog is not None:
                             await score_cog.update_scores(
@@ -184,4 +184,4 @@ class ChannelDailyCog(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(ChannelDailyCog(bot))
+    bot.add_cog(DailyBonuses(bot))

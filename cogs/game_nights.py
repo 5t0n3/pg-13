@@ -11,7 +11,7 @@ from discord_slash.context import SlashContext
 from .guild_ids import GUILD_IDS
 
 
-class GameNightCog(commands.Cog):
+class GameNights(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.gamenights")
@@ -148,7 +148,7 @@ class GameNightCog(commands.Cog):
         }
 
         # Dole out bonuses to everyone that attended
-        if (scores := self.bot.get_cog("ScoresCog")) is not None:
+        if (scores := self.bot.get_cog("Scores")) is not None:
             # Use thresholds to give out bonuses
             if guild_thresholds is not None:
                 for user_id, minutes in member_times:
@@ -240,4 +240,4 @@ class GameNightCog(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(GameNightCog(bot))
+    bot.add_cog(GameNights(bot))

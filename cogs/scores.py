@@ -11,7 +11,7 @@ from discord_slash.utils.manage_commands import create_option, create_choice
 from .guild_ids import GUILD_IDS
 
 
-class ScoresCog(commands.Cog):
+class Scores(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.scores")
@@ -23,7 +23,6 @@ class ScoresCog(commands.Cog):
     async def init_guild_scores(self):
         async with aiosqlite.connect("databases/scores.db") as scores:
             for guild in self.bot.guilds:
-                # TODO: Split score into cumulative/current scores
                 await scores.execute(
                     f"CREATE TABLE IF NOT EXISTS "
                     f"guild_{guild.id}(user INT PRIMARY KEY, current INT, cumulative INT)"
@@ -50,7 +49,7 @@ class ScoresCog(commands.Cog):
         ],
     )
     async def leaderboard(self, ctx: SlashContext, sort="cumulative"):
-        # Fetch top 10 guild scores
+        # Fetch top 15 guild scores
         async with aiosqlite.connect("databases/scores.db") as scores:
             user_scores = await scores.execute_fetchall(
                 f"SELECT * FROM guild_{ctx.guild_id} ORDER BY {sort} DESC LIMIT 15"
@@ -288,4 +287,4 @@ class ScoresCog(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(ScoresCog(bot))
+    bot.add_cog(Scores(bot))
