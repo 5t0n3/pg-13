@@ -181,7 +181,7 @@ class GameNights(commands.Cog):
         for place, (user_id, minutes) in enumerate(member_times, start=1):
             user = self.bot.get_user(user_id)
             duration_hmm = f"{minutes // 60}:{minutes % 60:02d}"
-            embed_desc += f"{place} - {user.mention} ({duration_hmm})"
+            embed_desc += f"{place} - {user.mention} ({duration_hmm})\n"
 
         summary = discord.Embed(
             title=f"Game night summary - {voice_channel.name}", description=embed_desc
