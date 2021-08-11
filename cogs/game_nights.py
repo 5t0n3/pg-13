@@ -153,20 +153,14 @@ class GameNights(commands.Cog):
             if guild_thresholds is not None:
                 for user_id, seconds in member_times:
                     # Fetch point bonus based on time spent in game night
-                    try:
-                        highest = max(
-                            filter(
-                                lambda threshold: threshold <= seconds // 60,
-                                guild_thresholds,
-                            )
-                        )
-                        user_bonus = guild_thresholds[highest]
-
-                    # Max on an empty iterable throws a ValueError
-                    # This happens when a user didn't stay long enough to
-                    # reach a threshold
-                    except ValueError:
-                        user_bonus = 0
+                    highest = max(
+                        filter(
+                            lambda threshold: threshold <= seconds // 60,
+                            guild_thresholds,
+                        ),
+                        default=0,
+                    )
+                    user_bonus = guild_thresholds.get(highest, 0)
 
                     # Fetch member associated with user id
                     member = channel.guild.get_member(user_id)
