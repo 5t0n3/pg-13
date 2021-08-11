@@ -73,15 +73,15 @@ class GameNights(commands.Cog):
                     (member.id,),
                 )
                 join_timestamp = await join_request.fetchone()
-                minutes_spent = (
+                seconds_spent = (
                     datetime.datetime.now()
                     - datetime.datetime.fromisoformat(join_timestamp[0])
-                ).seconds // 60
+                ).seconds
 
-                # Update minutes spent in game night
+                # Update seconds spent in game night
                 await gamenights.execute(
-                    f"UPDATE gamenight_{before.channel.id} SET minutes = minutes + ? WHERE user = ?",
-                    (minutes_spent, member.id),
+                    f"UPDATE gamenight_{before.channel.id} SET seconds = seconds + ? WHERE user = ?",
+                    (seconds_spent, member.id),
                 )
 
                 await gamenights.commit()
@@ -112,7 +112,7 @@ class GameNights(commands.Cog):
         async with aiosqlite.connect("databases/gamenights.db") as gamenights:
             # Fetch participation times
             member_times = await gamenights.execute_fetchall(
-                f"SELECT user, minutes FROM gamenight_{channel.id} ORDER BY minutes DESC"
+                f"SELECT user, seconds FROM gamenight_{channel.id} ORDER BY seconds DESC"
             )
 
             # This has to be iterated over multiple times
@@ -151,12 +151,22 @@ class GameNights(commands.Cog):
         if (scores := self.bot.get_cog("Scores")) is not None:
             # Use thresholds to give out bonuses
             if guild_thresholds is not None:
-                for user_id, minutes in member_times:
+                for user_id, seconds in member_times:
                     # Fetch point bonus based on time spent in game night
-                    highest = max(
-                        filter(lambda threshold: threshold <= minutes, guild_thresholds)
-                    )
-                    user_bonus = guild_thresholds[highest]
+                    try:
+                        highest = max(
+                            filter(
+                                lambda threshold: threshold <= seconds // 60,
+                                guild_thresholds,
+                            )
+                        )
+                        user_bonus = guild_thresholds[highest]
+
+                    # Max on an empty iterable throws a ValueError
+                    # This happens when a user didn't stay long enough to
+                    # reach a threshold
+                    except ValueError:
+                        user_bonus = 0
 
                     # Fetch member associated with user id
                     member = channel.guild.get_member(user_id)
@@ -178,8 +188,9 @@ class GameNights(commands.Cog):
         embed_desc = ""
 
         # Construct "leaderboard" of users (ties treated as separate places)
-        for place, (user_id, minutes) in enumerate(member_times, start=1):
+        for place, (user_id, seconds) in enumerate(member_times, start=1):
             user = self.bot.get_user(user_id)
+            minutes = seconds // 60
             duration_hmm = f"{minutes // 60}:{minutes % 60:02d}"
             embed_desc += f"{place} - {user.mention} ({duration_hmm})\n"
 
@@ -218,7 +229,7 @@ class GameNights(commands.Cog):
             # Initialize game-night-specific table
             await gamenights.execute(
                 f"CREATE TABLE gamenight_{gamenight_channel.id}"
-                "(user INT PRIMARY KEY, last_join DATETIME, minutes INT)"
+                "(user INT PRIMARY KEY, last_join DATETIME, seconds INT)"
             )
 
             # Add all users in call to newly-created table
