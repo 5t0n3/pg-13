@@ -266,7 +266,7 @@ class Scores(commands.Cog):
             await scores.commit()
 
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
-            await bonus_cog.update_bonus_roles(member.guild)
+            await bonus_cog.update_bonus_roles(member)
 
         # TODO: Also log cumulative score?
         self.logger.info(f"Updated {member.name}'s current score to {new_score}")
