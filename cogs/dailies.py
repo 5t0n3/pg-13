@@ -31,9 +31,9 @@ class DailyBonuses(commands.Cog):
         self.logger.info("Successfully initialized all guild daily tables.")
 
     @cog_ext.cog_subcommand(
-        base="daily",
+        base="bonus",
         name="attach",
-        description="Attach a daily reward to messages in a channel.",
+        description="Attach a daily point bonus to messages in a channel.",
         guild_ids=GUILD_IDS,
         options=[
             create_option(
@@ -90,9 +90,9 @@ class DailyBonuses(commands.Cog):
         await ctx.send(f"Successfully added {bonus}-point daily bonus to #{channel}!")
 
     @cog_ext.cog_subcommand(
-        base="daily",
+        base="bonus",
         name="detach",
-        description="Remove a daily bonus from a text channel.",
+        description="Remove a daily message bonus from a text channel.",
         guild_ids=GUILD_IDS,
         options=[
             create_option(
