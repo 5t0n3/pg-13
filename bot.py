@@ -32,7 +32,12 @@ class PG13Bot(commands.Bot):
             db_path.mkdir()
 
         # Load cogs
-        cogs = ["cogs.scores", "cogs.dailies", "cogs.game_nights", "cogs.bonus_roles"]
+        cogs = [
+            "cogs.scores",
+            "cogs.message_bonuses",
+            "cogs.game_nights",
+            "cogs.bonus_roles",
+        ]
         for cog in cogs:
             self.load_extension(cog)
 

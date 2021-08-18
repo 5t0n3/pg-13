@@ -13,7 +13,7 @@ from discord_slash.utils.manage_commands import create_option
 from .guild_ids import GUILD_IDS
 
 
-class DailyBonuses(commands.Cog):
+class DailyMessageBonuses(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.dailies")
@@ -232,4 +232,4 @@ class DailyBonuses(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(DailyBonuses(bot))
+    bot.add_cog(DailyMessageBonuses(bot))
