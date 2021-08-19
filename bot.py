@@ -34,7 +34,7 @@ class PG13Bot(commands.Bot):
         # Load cogs
         cogs = [
             "cogs.scores",
-            "cogs.message_bonuses",
+            "cogs.dailies",
             "cogs.game_nights",
             "cogs.bonus_roles",
         ]

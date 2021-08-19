@@ -92,6 +92,7 @@ class BonusRoles(commands.Cog):
 
             # Scores cog is a prerequisite; if this errors you have bigger
             # problems than a cog being None
+            scores_cog = self.bot.get_cog("Scores")
             await scores_cog.update_scores(member, 5, update_roles=False)
 
             # Update last place member ID for guild
