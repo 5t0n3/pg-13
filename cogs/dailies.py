@@ -246,11 +246,15 @@ class DailyBonuses(commands.Cog):
         async with aiosqlite.connect("databases/dailies.db") as dailies:
             # Clear all daily claim tables in every guild the bot is in
             for guild in self.bot.guilds:
+                # Channel bonus tables
                 async with dailies.execute(
                     f"SELECT channel FROM guild_{guild.id}"
                 ) as channels:
                     async for (channel_id,) in channels:
                         await dailies.execute(f"DELETE FROM channel_{channel_id}")
+
+                # Clear "/daily claim" table
+                await dailies.execute("DELETE FROM bonus_{guild.id}")
 
             await dailies.commit()
 
