@@ -40,8 +40,10 @@ class BonusRoles(commands.Cog):
                     "ORDER BY cumulative DESC LIMIT 12"
                 )
 
-            # Keep track of last place user
-            self.last_places[int(guild_id)] = top_users[-1][0]
+            # Keep track of last place user (if at least 12 users)
+            self.last_places[int(guild_id)] = (
+                top_users[-1][0] if len(top_users) == 12 else None
+            )
 
             role_members = set(bonus_role.members)
 
@@ -80,7 +82,9 @@ class BonusRoles(commands.Cog):
                 "ORDER BY cumulative DESC LIMIT 12"
             )
 
-        if (last_id := self.last_places[guild.id]) not in top_users:
+        if (
+            last_id := self.last_places[guild.id]
+        ) is not None and last_id not in top_users:
             # Remove user's regular role
             thirteenth_place = guild.get_member(last_id)
             await thirteenth_place.remove_roles(bonus_role, reason="Lost bonus role")
