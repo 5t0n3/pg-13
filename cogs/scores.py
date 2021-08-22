@@ -206,7 +206,7 @@ class Scores(commands.Cog):
 
         # Update bonus roles, if applicable
         if (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
-            await bonus_cog.update_bonus_roles(user)
+            await bonus_cog.update_bonus_roles(user.guild)
 
         await ctx.send(
             f"Successfully updated {user.name}'s {score_type} score to **{points}**!"
@@ -267,6 +267,7 @@ class Scores(commands.Cog):
 
         self.logger.info(f"Changed {user.name}'s current score by {points} points.")
 
+    # TODO: add a reason parameter for logging purposes
     async def update_scores(self, member, points, update_roles=True):
         """Updates both a user's current and cumulative scores"""
         async with aiosqlite.connect("databases/scores.db") as scores:
@@ -294,7 +295,7 @@ class Scores(commands.Cog):
             await scores.commit()
 
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
-            await bonus_cog.update_bonus_roles(member)
+            await bonus_cog.update_bonus_roles(member.guild)
 
         # TODO: Also log cumulative score?
         self.logger.info(f"Updated {member.name}'s current score to {new_score}")

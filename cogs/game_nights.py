@@ -165,8 +165,9 @@ class GameNights(commands.Cog):
                     # Fetch member associated with user id
                     member = channel.guild.get_member(user_id)
 
-                    # Update user's score
-                    await scores.update_scores(member, user_bonus)
+                    # Update user's score, if necessary
+                    if user_bonus > 0:
+                        await scores.update_scores(member, user_bonus)
 
             # Give the host 17 points for hosting
             host = channel.guild.get_member(summary_info[1])
