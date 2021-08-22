@@ -12,7 +12,7 @@ class BonusRoles(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.bonusroles")
-        self.last_places = {guild.id: None for guild in self.bot.guilds}
+        self.last_places = {}
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -29,8 +29,6 @@ class BonusRoles(commands.Cog):
         if bonus_id is None:
             self.logger.info(f"Guild {guild.name} doesn't have a bonus role")
 
-        # TODO: There's a lot of repeated code between this method & init_bonus_roles
-
         # Fetch role object to ensure it exists
         if (bonus_role := guild.get_role(bonus_id)) is None:
             self.logger.warn(
@@ -46,7 +44,7 @@ class BonusRoles(commands.Cog):
             )
 
         if (
-            last_id := self.last_places[guild.id]
+            last_id := self.last_places.get(guild.id, None)
         ) is not None and last_id not in top_users:
             # Remove ousted user's regular role
             thirteenth_place = guild.get_member(last_id)
