@@ -166,11 +166,11 @@ class GameNights(commands.Cog):
                     member = channel.guild.get_member(user_id)
 
                     # Update user's score
-                    await scores.update_scores(member, user_bonus, adjust=True)
+                    await scores.update_scores(member, user_bonus)
 
             # Give the host 17 points for hosting
             host = channel.guild.get_member(summary_info[1])
-            await scores.update_scores(host, 17, adjust=True)
+            await scores.update_scores(host, 17)
 
         self.logger.info(f"Cleaned up game night in channel {channel.name}")
 

@@ -256,7 +256,7 @@ class Scores(commands.Cog):
             points = -points
 
         # Update scores in database
-        await self.update_scores(user, points, adjust=True)
+        await self.update_scores(user, points)
 
         if mode == "increment":
             await ctx.send(f"Gave {user.name} {points} points!")
@@ -267,7 +267,7 @@ class Scores(commands.Cog):
 
         self.logger.info(f"Changed {user.name}'s current score by {points} points.")
 
-    async def update_scores(self, member, points, adjust=False, update_roles=True):
+    async def update_scores(self, member, points, update_roles=True):
         """Updates both a user's current and cumulative scores"""
         async with aiosqlite.connect("databases/scores.db") as scores:
             # Fetch current score for updating cumulative
@@ -280,13 +280,7 @@ class Scores(commands.Cog):
             # Default to 0 if score doesn't exist
             current_score = (current_score or (0,))[0]
 
-            # Incrementing/decrementing score
-            if adjust:
-                new_score = current_score + points
-
-            # Directly setting score
-            else:
-                new_score = points
+            new_score = current_score + points
 
             # The cumulative score should only increase
             cumulative_change = max(new_score - current_score, 0)

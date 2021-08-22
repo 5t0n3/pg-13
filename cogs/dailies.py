@@ -59,7 +59,7 @@ class DailyBonuses(commands.Cog):
             # Give user points if they haven't claimed it
             # TODO: confirm point amount
             if (scores_cog := self.bot.get_cog("Scores")) is not None:
-                await scores_cog.update_scores(ctx.author, 3, adjust=True)
+                await scores_cog.update_scores(ctx.author, 3)
 
             # Update daily claim table for guild
             await dailies.execute(
@@ -212,7 +212,7 @@ class DailyBonuses(commands.Cog):
 
                         if score_cog is not None:
                             await score_cog.update_scores(
-                                message.author, channel_bonus[0], adjust=True
+                                message.author, channel_bonus[0]
                             )
 
                         # Updated daily claimed table
