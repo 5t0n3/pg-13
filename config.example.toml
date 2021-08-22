@@ -2,10 +2,13 @@ token = "[your token here]"
 prefix = "[your prefix here]"
 
 # Put your guild-specific configuration(s) here
-[guilds.guild_id]
-thresholds = { minutes = points } # Multiple can be specified
-bonus_role = role_id
 
-[guilds.guild_id.admins]
-users = [ user_id1, user_id2 ] # ...
-roles = [ role_id1, role_id2 ] # ...
+# Example:
+
+# [guilds.guild_id]
+# thresholds = { minutes = points, ... }
+# bonus_role = [your bonus role id]
+
+# [guilds.guild_id.admins]
+# users = [ user_id, ... ]
+# roles = [ role_id, ... ]
