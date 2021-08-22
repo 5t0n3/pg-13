@@ -94,13 +94,13 @@ class BonusRoles(commands.Cog):
                 scores_cog = self.bot.get_cog("Scores")
                 await scores_cog.update_scores(new_last, 5, update_roles=False)
 
+                # Update last place member ID for guild
+                self.last_places[guild.id] = new_last.id
+
             # Theoretically this shouldn't happen but just in case
+            # TODO: Investigate why this would happen
             else:
                 self.logger.warn(f"User {last_id} not in guild {guild.id}")
-
-            # Update last place member ID for guild
-            # TODO: should this be done within the above if block?
-            self.last_places[guild.id] = new_last.id
 
 
 def setup(bot):
