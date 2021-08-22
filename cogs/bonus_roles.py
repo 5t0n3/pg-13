@@ -12,47 +12,16 @@ class BonusRoles(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.bonusroles")
-        self.last_places = {}
+        self.last_places = {guild.id: None for guild in self.bot.guilds}
 
     @commands.Cog.listener()
     async def on_ready(self):
         await self.init_bonus_roles()
 
     async def init_bonus_roles(self):
-        for guild_id, config in self.bot.guild_configs.items():
-            # Fetch guild and bonus role, or skip if either is invalid
-            guild = self.bot.get_guild(int(guild_id))
-            if (guild := self.bot.get_guild(int(guild_id))) is None:
-                self.logger.warn(f"Unable to fetch guild {guild_id}")
-                continue
-
-            bonus_id = config["bonus_role"]
-            if (bonus_role := guild.get_role(bonus_id)) is None:
-                self.logger.warn(f"Guild {guild.name} has no role with ID {bonus_id}")
-                continue
-
-            # Fetch user scores for guild
-            async with aiosqlite.connect("databases/scores.db") as scores:
-                top_users = await scores.execute_fetchall(
-                    f"SELECT user FROM guild_{guild.id} "
-                    "ORDER BY cumulative DESC LIMIT 12"
-                )
-
-            # Keep track of last place user (if at least 12 users)
-            self.last_places[int(guild_id)] = (
-                top_users[-1][0] if len(top_users) == 12 else None
-            )
-
-            role_members = set(bonus_role.members)
-
-            # Users that should have the bonus role but don't
-            for member_id in top_users:
-                member = guild.get_member(member_id)
-
-                if member is not None and member.id not in role_members:
-                    await member.add_roles(bonus_role)
-
-            self.logger.info(f"Initialized bonus roles for guild {guild.name}")
+        for guild_id in self.bot.guild_configs:
+            await self.update_bonus_roles(guild_id)
+            self.logger.info(f"Initialized bonus roles for guild {guild_id}")
 
     async def update_bonus_roles(self, guild):
         # Fetch guild's bonus role from config
