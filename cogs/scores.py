@@ -8,7 +8,7 @@ from discord_slash.model import SlashCommandOptionType as OptionType
 from discord_slash.context import SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 
-from .guild_ids import GUILD_IDS
+from .slash_config import loaded_guilds, admin_perms
 
 
 class Scores(commands.Cog):
@@ -34,7 +34,6 @@ class Scores(commands.Cog):
     @cog_ext.cog_slash(
         name="leaderboard",
         description="Display the score leaderboard for the current server.",
-        guild_ids=GUILD_IDS,
         options=[
             create_option(
                 name="sort",
@@ -47,6 +46,7 @@ class Scores(commands.Cog):
                 ],
             )
         ],
+        **loaded_guilds,
     )
     async def leaderboard(self, ctx: SlashContext, sort="cumulative"):
         # Fetch top 15 guild scores
@@ -95,7 +95,6 @@ class Scores(commands.Cog):
     @cog_ext.cog_slash(
         name="rank",
         description="Display a user's rank & score in this server.",
-        guild_ids=GUILD_IDS,
         options=[
             create_option(
                 name="score_type",
@@ -114,6 +113,7 @@ class Scores(commands.Cog):
                 required=False,
             ),
         ],
+        **loaded_guilds,
     )
     async def rank(self, ctx: SlashContext, score_type="cumulative", user=None):
         if user is None:
@@ -150,12 +150,10 @@ class Scores(commands.Cog):
             f"{user.name} is in **{self.make_ordinal(user_rank)} place** with **{user_score}** ({score_type}) points."
         )
 
-    # TODO: Split into 2 commands: set & something for giving/taking points (flag for which one)
     @cog_ext.cog_subcommand(
         base="score",
         name="set",
         description="Set a user's score to a specific value.",
-        guild_ids=GUILD_IDS,
         options=[
             create_option(
                 name="user",
@@ -178,9 +176,10 @@ class Scores(commands.Cog):
                     create_choice(value="current", name="Current score"),
                     create_choice(value="cumulative", name="Cumulative score"),
                 ],
-            )
-            # TODO: Add flag for changing current/cumulative score?
+            ),
         ],
+        **loaded_guilds,
+        **admin_perms,
     )
     async def score_set(self, ctx: SlashContext, user, points, score_type="current"):
         # Bots are ignored for score purposes
@@ -220,7 +219,6 @@ class Scores(commands.Cog):
         base="score",
         name="adjust",
         description="Give points to or take points away from a user.",
-        guild_ids=GUILD_IDS,
         options=[
             create_option(
                 name="user",
@@ -245,6 +243,8 @@ class Scores(commands.Cog):
                 ],
             ),
         ],
+        **loaded_guilds,
+        **admin_perms,
     )
     async def score_adjust(self, ctx: SlashContext, user, points, mode="increment"):
         # Bots are ignored for score purposes

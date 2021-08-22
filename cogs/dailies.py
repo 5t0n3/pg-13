@@ -10,7 +10,7 @@ from discord_slash.model import SlashCommandOptionType as OptionType
 from discord_slash.context import SlashContext
 from discord_slash.utils.manage_commands import create_option
 
-from .guild_ids import GUILD_IDS
+from .slash_config import loaded_guilds, admin_perms
 
 
 class DailyBonuses(commands.Cog):
@@ -42,7 +42,7 @@ class DailyBonuses(commands.Cog):
         base="daily",
         name="claim",
         description="Claim a daily reward of some points.",
-        guild_ids=GUILD_IDS,
+        **loaded_guilds,
     )
     async def daily_claim(self, ctx: SlashContext):
         async with aiosqlite.connect("databases/dailies.db") as dailies:
@@ -74,7 +74,6 @@ class DailyBonuses(commands.Cog):
         base="bonus",
         name="attach",
         description="Attach a daily point bonus to messages in a channel.",
-        guild_ids=GUILD_IDS,
         options=[
             create_option(
                 name="channel",
@@ -95,6 +94,8 @@ class DailyBonuses(commands.Cog):
                 required=False,
             ),
         ],
+        **loaded_guilds,
+        **admin_perms,
     )
     async def bonus_attach(self, ctx: SlashContext, channel, bonus=1, attachment=False):
         if not isinstance(channel, discord.TextChannel):
@@ -133,7 +134,6 @@ class DailyBonuses(commands.Cog):
         base="bonus",
         name="detach",
         description="Remove a daily message bonus from a text channel.",
-        guild_ids=GUILD_IDS,
         options=[
             create_option(
                 name="channel",
@@ -142,6 +142,8 @@ class DailyBonuses(commands.Cog):
                 required=True,
             )
         ],
+        **loaded_guilds,
+        **admin_perms,
     )
     async def bonus_detach(self, ctx: SlashContext, channel):
         # Bonuses can only be attached to text channels

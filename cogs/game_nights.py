@@ -8,7 +8,7 @@ from discord_slash import cog_ext
 from discord_slash.model import SlashCommandOptionType as OptionType
 from discord_slash.context import SlashContext
 
-from .guild_ids import GUILD_IDS
+from .slash_config import loaded_guilds
 
 
 class GameNights(commands.Cog):
@@ -200,7 +200,7 @@ class GameNights(commands.Cog):
         base="gamenight",
         name="host",
         description="Start a game night in your current voice channel.",
-        guild_ids=GUILD_IDS,
+        **loaded_guilds,
     )
     async def gamenight_host(self, ctx: SlashContext):
         if (voice_state := ctx.author.voice) is None:

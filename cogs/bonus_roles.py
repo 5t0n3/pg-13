@@ -7,8 +7,6 @@ from discord_slash.context import SlashContext
 from discord_slash.model import SlashCommandOptionType as OptionType
 from discord_slash.utils.manage_commands import create_option, create_choice
 
-from .guild_ids import GUILD_IDS
-
 
 class BonusRoles(commands.Cog):
     def __init__(self, bot):
