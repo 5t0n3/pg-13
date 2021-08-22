@@ -143,7 +143,6 @@ class DailyBonuses(commands.Cog):
             )
         ],
         **loaded_guilds,
-        **admin_perms,
     )
     async def bonus_detach(self, ctx: SlashContext, channel):
         # Bonuses can only be attached to text channels
