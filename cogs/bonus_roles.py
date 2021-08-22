@@ -19,15 +19,16 @@ class BonusRoles(commands.Cog):
         await self.init_bonus_roles()
 
     async def init_bonus_roles(self):
-        for guild_id in self.bot.guild_configs:
-            await self.update_bonus_roles(guild_id)
-            self.logger.info(f"Initialized bonus roles for guild {guild_id}")
+        for guild in self.bot.guilds:
+            await self.update_bonus_roles(guild)
+            self.logger.info(f"Initialized bonus roles for guild {guild.name}")
 
     async def update_bonus_roles(self, guild):
         # Fetch guild's bonus role from config
         bonus_id = int(self.bot.guild_configs[str(guild.id)].get("bonus_role", None))
         if bonus_id is None:
-            self.logger.info(f"Guild {guild.name} doesn't have a bonus role")
+            self.logger.warn(f"Guild {guild.name} doesn't have a bonus role configured")
+            return
 
         # Fetch role object to ensure it exists
         if (bonus_role := guild.get_role(bonus_id)) is None:
