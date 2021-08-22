@@ -44,5 +44,12 @@ class PG13Bot(commands.Bot):
     def run(self):
         super().run(self._token)
 
+    async def update_presence(self):
+        bot_presence = discord.Activity(
+            name="your every move :)", type=discord.ActivityType.watching
+        )
+        await self.change_presence(activity=bot_presence, status=discord.Status.idle)
+
     async def on_ready(self):
+        await self.update_presence()
         self.logger.info("Now running!")
