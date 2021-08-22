@@ -46,7 +46,7 @@ class PG13Bot(commands.Bot):
 
     async def update_presence(self):
         bot_presence = discord.Activity(
-            name="your every move :)", type=discord.ActivityType.watching
+            name="your every mov(i)e :)", type=discord.ActivityType.watching
         )
         await self.change_presence(activity=bot_presence, status=discord.Status.idle)
 
