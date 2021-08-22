@@ -55,8 +55,6 @@ class BonusRoles(commands.Cog):
             self.logger.info(f"Initialized bonus roles for guild {guild.name}")
 
     async def update_bonus_roles(self, member):
-        # TODO: take member as parameter instead and only look at if their place changed
-
         guild = member.guild
 
         # Fetch guild's bonus role from config
