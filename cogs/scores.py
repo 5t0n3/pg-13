@@ -164,23 +164,57 @@ class Scores(commands.Cog):
                 required=True,
             ),
             create_option(
-                name="score",
+                name="points",
                 description="The user's new score.",
                 option_type=OptionType.INTEGER,
                 required=True,
             ),
+            create_option(
+                name="score_type",
+                description="Which score to set (default current)",
+                option_type=OptionType.STRING,
+                required=False,
+                choices=[
+                    create_choice(value="current", name="Current score"),
+                    create_choice(value="cumulative", name="Cumulative score"),
+                ],
+            )
             # TODO: Add flag for changing current/cumulative score?
         ],
     )
-    async def score_set(self, ctx: SlashContext, user, score):
+    async def score_set(self, ctx: SlashContext, user, points, score_type="current"):
         # Bots are ignored for score purposes
         if user.bot:
             return await ctx.send(f"{user.name} is a bot and cannot get points.")
 
-        # Update cumulative & current scores
-        await self.update_scores(user, score)
+        # Default the score not being set to 0
+        if score_type == "current":
+            new_current = points
+            new_cumulative = 0
+        # score_type == "cumulative"
+        else:
+            new_cumulative = points
+            new_current = 0
 
-        await ctx.send(f"Successfully updated {user.name}'s score to **{score}**!")
+        # Update user's score in guild database table
+        async with aiosqlite.connect("databases/scores.db") as scores:
+            await scores.execute(
+                f"INSERT INTO guild_{ctx.guild_id} VALUES(?, ?, ?) "
+                f"ON CONFLICT(user) DO UPDATE SET {score_type} = ?",
+                (user.id, new_current, new_cumulative, points),
+            )
+            await scores.commit()
+
+        # Update bonus roles, if applicable
+        if (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
+            await bonus_cog.update_bonus_roles(user)
+
+        await ctx.send(
+            f"Successfully updated {user.name}'s {score_type} score to **{points}**!"
+        )
+        self.logger.info(
+            f"Successfully updated {user.name}'s {score_type} score to {points}"
+        )
 
     @cog_ext.cog_subcommand(
         base="score",
