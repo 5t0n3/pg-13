@@ -255,7 +255,7 @@ class DailyBonuses(commands.Cog):
                         await dailies.execute(f"DELETE FROM channel_{channel_id}")
 
                 # Clear "/daily claim" table
-                await dailies.execute("DELETE FROM bonus_{guild.id}")
+                await dailies.execute(f"DELETE FROM bonus_{guild.id}")
 
             await dailies.commit()
 
