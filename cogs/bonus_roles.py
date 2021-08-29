@@ -46,10 +46,27 @@ class BonusRoles(commands.Cog):
 
         # Convert list of rows (tuples) to list of user ids
         top_users = list(map(lambda row: row[0], top_rows))
+        top_user_set = set(top_users)
 
-        if (
-            last_id := self.last_places.get(guild.id, None)
-        ) is not None and last_id not in top_users:
+        # Uninitialized; check all users
+        if (last_id := self.last_places.get(guild.id, None)) is None:
+            current_bonus_members = set(bonus_role.members)
+            current_bonus_ids = set(
+                map(lambda member: member.id, current_bonus_members)
+            )
+
+            # Remove bonus role from people no longer in the first 12 places
+            for user_id in current_bonus_ids - top_user_set:
+                member = guild.get_member(user_id)
+                await member.remove_roles(bonus_role, reason="Lost bonus role")
+
+            # Add role to members if they don't already have it
+            for user_id in top_user_set - current_bonus_ids:
+                member = guild.get_member(user_id)
+                await member.add_roles(bonus_role, reason="Gained bonus role")
+
+        # Swap 2 users' bonus roles, if applicable
+        elif last_id not in top_user_set:
             # Remove ousted user's regular role
             thirteenth_place = guild.get_member(last_id)
             await thirteenth_place.remove_roles(bonus_role, reason="Lost bonus role")
@@ -71,11 +88,11 @@ class BonusRoles(commands.Cog):
             # Theoretically this shouldn't happen but just in case
             # TODO: Investigate why this would happen
             else:
-                self.logger.warn(f"User {last_id} not in guild {guild.id}")
+                self.logger.warn(f"User {last_id} not in guild {guild.name}")
 
         else:
             self.logger.info(
-                f"Bonus roles didn't have to be updated in guild {guild.id}"
+                f"Bonus roles didn't have to be updated in guild {guild.name}"
             )
 
 
