@@ -65,6 +65,11 @@ class BonusRoles(commands.Cog):
                 member = guild.get_member(user_id)
                 await member.add_roles(bonus_role, reason="Gained bonus role")
 
+                # Give user 5-point bonus if they didn't have the role before
+                # See below comment about checking if the cog is None
+                scores_cog = self.bot.get_cog("Scores")
+                await scores_cog.update_scores(member, 5, update_roles=False)
+
         # Swap 2 users' bonus roles, if applicable
         elif last_id not in top_user_set:
             # Remove ousted user's regular role
