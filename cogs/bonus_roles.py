@@ -39,10 +39,13 @@ class BonusRoles(commands.Cog):
 
         # Fetch top users from guild
         async with aiosqlite.connect("databases/scores.db") as scores:
-            top_users = await scores.execute_fetchall(
+            top_rows = await scores.execute_fetchall(
                 f"SELECT user FROM guild_{guild.id} "
                 "ORDER BY cumulative DESC LIMIT 12"
             )
+
+        # Convert list of rows (tuples) to list of user ids
+        top_users = list(map(lambda row: row[0], top_rows))
 
         if (
             last_id := self.last_places.get(guild.id, None)
@@ -69,6 +72,11 @@ class BonusRoles(commands.Cog):
             # TODO: Investigate why this would happen
             else:
                 self.logger.warn(f"User {last_id} not in guild {guild.id}")
+
+        else:
+            self.logger.info(
+                f"Bonus roles didn't have to be updated in guild {guild.id}"
+            )
 
 
 def setup(bot):
