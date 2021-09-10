@@ -18,6 +18,9 @@ class DailyBonuses(commands.Cog):
         self.bot = bot
         self.logger = logging.getLogger("pg13.dailies")
 
+        # Schedule clearing of daily tables
+        self.clear_daily_claims.start()
+
     async def init_guild_daily_tables(self):
         async with aiosqlite.connect("databases/dailies.db") as dailies:
             for guild in self.bot.guilds:
@@ -238,9 +241,6 @@ class DailyBonuses(commands.Cog):
     async def on_ready(self):
         # Initialize daily tables
         await self.init_guild_daily_tables()
-
-        # Schedule clearing of daily tables
-        self.clear_daily_claims.start()
 
     @tasks.loop(hours=24)
     async def clear_daily_claims(self):
