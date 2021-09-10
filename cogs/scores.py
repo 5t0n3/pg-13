@@ -244,6 +244,7 @@ class Scores(commands.Cog):
             ),
         ],
         **loaded_guilds,
+        **admin_perms,
     )
     async def score_adjust(self, ctx: SlashContext, user, points, mode="increment"):
         # Bots are ignored for score purposes
