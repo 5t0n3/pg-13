@@ -23,5 +23,8 @@ rotating_handler.setFormatter(log_format)
 root_logger = logging.getLogger()
 root_logger.addHandler(rotating_handler)
 
+# Make sure root logger is also set to INFO logging level
+root_logger.setLevel("INFO")
+
 pg13_bot = PG13Bot("config.toml")
 pg13_bot.run()
