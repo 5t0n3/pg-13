@@ -225,7 +225,7 @@ class Scores(commands.Cog):
             # Get the new cumulative score for logging purposes
             new_cumulative = await scores.execute(
                 f"SELECT cumulative FROM guild_{member.guild.id} WHERE user = ?",
-                (member.id),
+                (member.id,),
             )
 
             await scores.commit()
