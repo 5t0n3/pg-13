@@ -62,9 +62,10 @@ class Scores(commands.Cog):
             else:
                 place_str = " "
 
-            leaderboard.description += f"{place_str} {member.mention} - {cumulative} points\n"
+            leaderboard.description += (
+                f"{place_str} {member.mention} - {cumulative} points\n"
+            )
             previous_score = cumulative
-
 
         await ctx.send(embed=leaderboard)
 
@@ -155,12 +156,8 @@ class Scores(commands.Cog):
         if (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(user.guild)
 
-        await ctx.send(
-            f"Successfully updated {user.name}'s score to **{points}**!"
-        )
-        self.logger.info(
-            f"Successfully updated {user.name}'s score to {points}"
-        )
+        await ctx.send(f"Successfully updated {user.name}'s score to **{points}**!")
+        self.logger.info(f"Successfully updated {user.name}'s score to {points}")
 
     @cog_ext.cog_subcommand(
         base="score",
@@ -225,13 +222,21 @@ class Scores(commands.Cog):
                 (member.id, points, points),
             )
 
+            # Get the new cumulative score for logging purposes
+            new_cumulative = await scores.execute(
+                f"SELECT cumulative FROM guild_{member.guild.id} WHERE user = ?",
+                (member.id),
+            )
+
             await scores.commit()
 
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(member.guild)
 
         # TODO: Also log cumulative score?
-        self.logger.info(f"Updated {member.name}'s cumulative score to {new_score}")
+        self.logger.info(
+            f"Updated {member.name}'s cumulative score to {new_cumulative}"
+        )
 
     def make_ordinal(self, n):
         """
