@@ -211,7 +211,7 @@ class DailyBonuses(commands.Cog):
 
                     # Bonus not claimed and attachment(s) supplied if necessary
                     elif claimed_today is None:
-                        # Update both cumulative & current scores
+                        # Update cumulative score
                         score_cog = self.bot.get_cog("Scores")
 
                         if score_cog is not None:

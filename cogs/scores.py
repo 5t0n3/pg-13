@@ -25,7 +25,7 @@ class Scores(commands.Cog):
             for guild in self.bot.guilds:
                 await scores.execute(
                     f"CREATE TABLE IF NOT EXISTS "
-                    f"guild_{guild.id}(user INT PRIMARY KEY, current INT, cumulative INT)"
+                    f"guild_{guild.id}(user INT PRIMARY KEY, cumulative INT)"
                 )
 
             await scores.commit()
@@ -34,61 +34,37 @@ class Scores(commands.Cog):
     @cog_ext.cog_slash(
         name="leaderboard",
         description="Display the score leaderboard for the current server.",
-        options=[
-            create_option(
-                name="sort",
-                description="Which score to order users by (default cumulative)",
-                option_type=OptionType.STRING,
-                required=False,
-                choices=[
-                    create_choice(value="cumulative", name="Cumulative score"),
-                    create_choice(value="current", name="Current score"),
-                ],
-            )
-        ],
         **loaded_guilds,
     )
-    async def leaderboard(self, ctx: SlashContext, sort="cumulative"):
+    async def leaderboard(self, ctx: SlashContext):
         # Fetch top 15 guild scores
         async with aiosqlite.connect("databases/scores.db") as scores:
             user_scores = await scores.execute_fetchall(
-                f"SELECT * FROM guild_{ctx.guild_id} ORDER BY {sort} DESC LIMIT 15"
+                f"SELECT user, cumulative FROM guild_{ctx.guild_id} ORDER BY cumulative DESC LIMIT 15"
             )
 
         guild = self.bot.get_guild(ctx.guild_id)
 
         # Initialize embed
         leaderboard = discord.Embed(title=f"{guild.name} Leaderboard", description="")
-        leaderboard.set_footer(text=f"(sorted by {sort} score)")
 
         # Used to deal with score ties
         place = 1
         previous_score = None
 
         # Convert rows to leaderboard
-        for user_id, current, cumulative in user_scores:
+        for user_id, cumulative in user_scores:
             member = guild.get_member(user_id)
 
-            if sort == "cumulative":
-                if cumulative != previous_score:
-                    place_str = f"{place}:"
-                    place += 1
-                else:
-                    place_str = " "
-
-                leaderboard.description += f"{place_str} {member.mention} - {cumulative} points (current {current})\n"
-                previous_score = cumulative
-
-            # Ordered by current score
+            if cumulative != previous_score:
+                place_str = f"{place}:"
+                place += 1
             else:
-                if current != previous_score:
-                    place_str = f"{place}:"
-                    place += 1
-                else:
-                    place_str = " "
+                place_str = " "
 
-                leaderboard.description += f"{place_str} {member.mention} - {current} points (cumulative {cumulative})\n"
-                previous_score = current
+            leaderboard.description += f"{place_str} {member.mention} - {cumulative} points\n"
+            previous_score = cumulative
+
 
         await ctx.send(embed=leaderboard)
 
@@ -96,16 +72,6 @@ class Scores(commands.Cog):
         name="rank",
         description="Display a user's rank & score in this server.",
         options=[
-            create_option(
-                name="score_type",
-                description="Which score to rank the user based on (default cumulative).",
-                option_type=OptionType.STRING,
-                required=False,
-                choices=[
-                    create_choice(value="cumulative", name="Cumulative score"),
-                    create_choice(value="current", name="Current score"),
-                ],
-            ),
             create_option(
                 name="user",
                 description="The user to display the rank of (default you).",
@@ -115,7 +81,7 @@ class Scores(commands.Cog):
         ],
         **loaded_guilds,
     )
-    async def rank(self, ctx: SlashContext, score_type="cumulative", user=None):
+    async def rank(self, ctx: SlashContext, user=None):
         if user is None:
             user = ctx.author
 
@@ -123,11 +89,11 @@ class Scores(commands.Cog):
         # Get guild & user's score(s) for standings comparison
         async with aiosqlite.connect("databases/scores.db") as scores:
             guild_standings = await scores.execute_fetchall(
-                f"SELECT DISTINCT {score_type} FROM guild_{ctx.guild_id} ORDER BY {score_type} DESC"
+                f"SELECT DISTINCT cumulative FROM guild_{ctx.guild_id} ORDER BY cumulative DESC"
             )
 
             user_request = await scores.execute(
-                f"SELECT {score_type} FROM guild_{ctx.guild_id} WHERE user = ?",
+                f"SELECT cumulative FROM guild_{ctx.guild_id} WHERE user = ?",
                 (user.id,),
             )
             user_row = await user_request.fetchone()
@@ -147,7 +113,7 @@ class Scores(commands.Cog):
         )[0]
 
         await ctx.send(
-            f"{user.name} is in **{self.make_ordinal(user_rank)} place** with **{user_score}** ({score_type}) points."
+            f"{user.name} is in **{self.make_ordinal(user_rank)} place** with **{user_score}** points."
         )
 
     @cog_ext.cog_subcommand(
@@ -167,40 +133,21 @@ class Scores(commands.Cog):
                 option_type=OptionType.INTEGER,
                 required=True,
             ),
-            create_option(
-                name="score_type",
-                description="Which score to set (default current)",
-                option_type=OptionType.STRING,
-                required=False,
-                choices=[
-                    create_choice(value="current", name="Current score"),
-                    create_choice(value="cumulative", name="Cumulative score"),
-                ],
-            ),
         ],
         **loaded_guilds,
         **admin_perms,
     )
-    async def score_set(self, ctx: SlashContext, user, points, score_type="current"):
+    async def score_set(self, ctx: SlashContext, user, points):
         # Bots are ignored for score purposes
         if user.bot:
             return await ctx.send(f"{user.name} is a bot and cannot get points.")
 
-        # Default the score not being set to 0
-        if score_type == "current":
-            new_current = points
-            new_cumulative = 0
-        # score_type == "cumulative"
-        else:
-            new_cumulative = points
-            new_current = 0
-
         # Update user's score in guild database table
         async with aiosqlite.connect("databases/scores.db") as scores:
             await scores.execute(
-                f"INSERT INTO guild_{ctx.guild_id} VALUES(?, ?, ?) "
-                f"ON CONFLICT(user) DO UPDATE SET {score_type} = ?",
-                (user.id, new_current, new_cumulative, points),
+                f"INSERT INTO guild_{ctx.guild_id}(user, cumulative) VALUES(?, ?) "
+                f"ON CONFLICT(user) DO UPDATE SET cumulative = ?",
+                (user.id, points, points),
             )
             await scores.commit()
 
@@ -209,10 +156,10 @@ class Scores(commands.Cog):
             await bonus_cog.update_bonus_roles(user.guild)
 
         await ctx.send(
-            f"Successfully updated {user.name}'s {score_type} score to **{points}**!"
+            f"Successfully updated {user.name}'s score to **{points}**!"
         )
         self.logger.info(
-            f"Successfully updated {user.name}'s {score_type} score to {points}"
+            f"Successfully updated {user.name}'s score to {points}"
         )
 
     @cog_ext.cog_subcommand(
@@ -265,31 +212,17 @@ class Scores(commands.Cog):
         else:
             await ctx.send(f"Took {-points} points from {user.name}!")
 
-        self.logger.info(f"Changed {user.name}'s current score by {points} points.")
+        self.logger.info(f"Changed {user.name}'s cumulative score by {points} points.")
 
     # TODO: add a reason parameter for logging purposes
     async def update_scores(self, member, points, update_roles=True):
-        """Updates both a user's current and cumulative scores"""
+        """Updates a user's cumulative score by some amount"""
         async with aiosqlite.connect("databases/scores.db") as scores:
-            # Fetch current score for updating cumulative
-            current_request = await scores.execute(
-                f"SELECT current FROM guild_{member.guild.id} WHERE user = ?",
-                (member.id,),
-            )
-            current_score = await current_request.fetchone()
-
-            # Default to 0 if score doesn't exist
-            current_score = (current_score or (0,))[0]
-
-            new_score = current_score + points
-
-            # The cumulative score should only increase
-            cumulative_change = max(new_score - current_score, 0)
-
+            # Only update the user's cumulative score (current score is no longer used)
             await scores.execute(
-                f"INSERT INTO guild_{member.guild.id} VALUES(?, ?, ?) ON CONFLICT(user) "
-                "DO UPDATE SET current = ?, cumulative = cumulative + ?",
-                (member.id, new_score, new_score, new_score, cumulative_change),
+                f"INSERT INTO guild_{member.guild.id}(user, cumulative) VALUES(?, ?) ON CONFLICT(user) "
+                "DO UPDATE SET cumulative = cumulative + ?",
+                (member.id, points, points),
             )
 
             await scores.commit()
@@ -298,7 +231,7 @@ class Scores(commands.Cog):
             await bonus_cog.update_bonus_roles(member.guild)
 
         # TODO: Also log cumulative score?
-        self.logger.info(f"Updated {member.name}'s current score to {new_score}")
+        self.logger.info(f"Updated {member.name}'s cumulative score to {new_score}")
 
     def make_ordinal(self, n):
         """
