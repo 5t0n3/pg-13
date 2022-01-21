@@ -1,11 +1,17 @@
 import logging
 import logging.handlers as handlers
+import pathlib
 
 from bot import PG13Bot
 
+# Ensure log file directory exists
+log_path = pathlib.Path("./logs/")
+if not log_path.exists():
+    log_path.mkdir()
+
 # Rotate log files every 24 hours (at midnight)
 rotating_handler = handlers.TimedRotatingFileHandler(
-    filename="discord.log",
+    filename="logs/discord.log",
     when="midnight",
 )
 
