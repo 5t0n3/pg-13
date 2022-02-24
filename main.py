@@ -11,8 +11,7 @@ if not log_path.exists():
 
 # Rotate log files every 24 hours (at midnight)
 rotating_handler = handlers.TimedRotatingFileHandler(
-    filename="logs/discord.log",
-    when="midnight",
+    filename="logs/discord.log", when="midnight", encoding="utf8"
 )
 
 # Use INFO logging level

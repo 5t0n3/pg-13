@@ -223,17 +223,17 @@ class Scores(commands.Cog):
             )
 
             # Get the new cumulative score for logging purposes
-            new_cumulative = await scores.execute(
+            new_cumulative_req = await scores.execute(
                 f"SELECT cumulative FROM guild_{member.guild.id} WHERE user = ?",
                 (member.id,),
             )
+            new_cumulative = await new_cumulative_req.fetchone()
 
             await scores.commit()
 
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(member.guild)
 
-        # TODO: Also log cumulative score?
         self.logger.info(
             f"Updated {member.name}'s cumulative score to {new_cumulative}"
         )
