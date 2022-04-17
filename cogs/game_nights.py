@@ -34,9 +34,6 @@ class GameNights(commands.Cog):
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         # TODO: Add logging to this event listener
-        # Ignore bots (e.g. Rythm/Groovy)
-        if member.bot:
-            return
 
         # Ignore if a user mutes/deafens
         if before.channel == after.channel:
@@ -64,49 +61,51 @@ class GameNights(commands.Cog):
             else:
                 after_has_gamenight = None
 
-        # User left a game night channel
-        if before_had_gamenight is not None:
-            async with aiosqlite.connect("databases/gamenights.db") as gamenights:
-                # Note: user theoretically guaranteed to have row in game night table
-                join_request = await gamenights.execute(
-                    f"SELECT last_join FROM gamenight_{before.channel.id} WHERE user = ?",
-                    (member.id,),
-                )
-                join_timestamp = await join_request.fetchone()
-                seconds_spent = (
-                    datetime.datetime.now()
-                    - datetime.datetime.fromisoformat(join_timestamp[0])
-                ).seconds
+        # Ignore bots (e.g. Rythm/Groovy) for point tracking purposes
+        if not member.bot:
+            # User left a game night channel
+            if before_had_gamenight is not None:
+                async with aiosqlite.connect("databases/gamenights.db") as gamenights:
+                    # Note: user theoretically guaranteed to have row in game night table
+                    join_request = await gamenights.execute(
+                        f"SELECT last_join FROM gamenight_{before.channel.id} WHERE user = ?",
+                        (member.id,),
+                    )
+                    join_timestamp = await join_request.fetchone()
+                    seconds_spent = (
+                        datetime.datetime.now()
+                        - datetime.datetime.fromisoformat(join_timestamp[0])
+                    ).seconds
 
-                # Update seconds spent in game night
-                await gamenights.execute(
-                    f"UPDATE gamenight_{before.channel.id} SET seconds = seconds + ? WHERE user = ?",
-                    (seconds_spent, member.id),
-                )
+                    # Update seconds spent in game night
+                    await gamenights.execute(
+                        f"UPDATE gamenight_{before.channel.id} SET seconds = seconds + ? WHERE user = ?",
+                        (seconds_spent, member.id),
+                    )
 
-                await gamenights.commit()
+                    await gamenights.commit()
 
-            self.logger.info(f"User {member.name} left channel {before.channel.name}")
+                self.logger.info(f"User {member.name} left channel {before.channel.name}")
 
-            # Automatically end game night if everyone leaves a channel
-            if not before.channel.members:
-                await self.end_gamenight(before.channel)
+            # User joined a game night channel
+            if after_has_gamenight is not None:
+                join_time = datetime.datetime.now().isoformat()
 
-        # User joined a game night channel
-        if after_has_gamenight is not None:
-            join_time = datetime.datetime.now().isoformat()
+                # Update user's last_join timestamp
+                async with aiosqlite.connect("databases/gamenights.db") as gamenights:
+                    await gamenights.execute(
+                        f"INSERT INTO gamenight_{after.channel.id} VALUES(?, ?, 0)"
+                        "ON CONFLICT(user) DO UPDATE SET last_join = ?",
+                        (member.id, join_time, join_time),
+                    )
 
-            # Update user's last_join timestamp
-            async with aiosqlite.connect("databases/gamenights.db") as gamenights:
-                await gamenights.execute(
-                    f"INSERT INTO gamenight_{after.channel.id} VALUES(?, ?, 0)"
-                    "ON CONFLICT(user) DO UPDATE SET last_join = ?",
-                    (member.id, join_time, join_time),
-                )
+                    await gamenights.commit()
 
-                await gamenights.commit()
+                self.logger.info(f"User {member.name} joined channel {after.channel.name}")
 
-            self.logger.info(f"User {member.name} joined channel {after.channel.name}")
+        # Automatically end game night if everyone leaves a channel
+        if not before.channel.members:
+            await self.end_gamenight(before.channel)
 
     async def end_gamenight(self, channel):
         async with aiosqlite.connect("databases/gamenights.db") as gamenights:
