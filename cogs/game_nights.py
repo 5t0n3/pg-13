@@ -85,7 +85,9 @@ class GameNights(commands.Cog):
 
                     await gamenights.commit()
 
-                self.logger.info(f"User {member.name} left channel {before.channel.name}")
+                self.logger.info(
+                    f"User {member.name} left channel {before.channel.name}"
+                )
 
             # User joined a game night channel
             if after_has_gamenight is not None:
@@ -101,7 +103,9 @@ class GameNights(commands.Cog):
 
                     await gamenights.commit()
 
-                self.logger.info(f"User {member.name} joined channel {after.channel.name}")
+                self.logger.info(
+                    f"User {member.name} joined channel {after.channel.name}"
+                )
 
         # Automatically end game night if everyone leaves a channel
         if not before.channel.members:

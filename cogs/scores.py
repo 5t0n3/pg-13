@@ -70,6 +70,23 @@ class Scores(commands.Cog):
         await ctx.send(embed=leaderboard)
 
     @cog_ext.cog_slash(
+        name="total",
+        description="Check the total amount of points of members in this server.",
+        **loaded_guilds,
+    )
+    async def total(self, ctx: SlashContext):
+        guild_total = 0
+
+        # Sum up all scores within the server
+        async with aiosqlite.connect("databases/scores.db") as scores:
+            async for (score,) in scores.execute(
+                f"SELECT cumulative FROM guild_{ctx.guild_id}"
+            ):
+                guild_total += score
+
+        await ctx.send(f"Total points for this server: **{guild_total}**")
+
+    @cog_ext.cog_slash(
         name="rank",
         description="Display a user's rank & score in this server.",
         options=[
