@@ -79,10 +79,11 @@ class Scores(commands.Cog):
 
         # Sum up all scores within the server
         async with aiosqlite.connect("databases/scores.db") as scores:
-            async for (score,) in scores.execute(
+            async with scores.execute(
                 f"SELECT cumulative FROM guild_{ctx.guild_id}"
-            ):
-                guild_total += score
+            ) as guild_scores:
+                async for (score,) in guild_scores:
+                    guild_total += score
 
         await ctx.send(f"Total points for this server: **{guild_total}**")
 
