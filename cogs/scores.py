@@ -40,7 +40,7 @@ class Scores(commands.Cog):
         # Fetch top 15 guild scores
         async with aiosqlite.connect("databases/scores.db") as scores:
             user_scores = await scores.execute_fetchall(
-                f"SELECT user, cumulative FROM guild_{ctx.guild_id} ORDER BY cumulative DESC LIMIT 15"
+                f"SELECT user, cumulative FROM guild_{ctx.guild_id} ORDER BY cumulative DESC"
             )
 
         guild = self.bot.get_guild(ctx.guild_id)
@@ -56,16 +56,26 @@ class Scores(commands.Cog):
         for user_id, cumulative in user_scores:
             member = guild.get_member(user_id)
 
+            # Skip users that are no longer in the server
+            if member is None:
+                continue
+
             if cumulative != previous_score:
                 place_str = f"{place}:"
                 place += 1
             else:
-                place_str = " "
+                place_str = "  "
 
             leaderboard.description += (
                 f"{place_str} {member.mention} - {cumulative} points\n"
             )
+
             previous_score = cumulative
+
+            # Only take the first 15 users
+            # TODO: Implement pagination of the leaderboard
+            if place <= 15:
+                break
 
         await ctx.send(embed=leaderboard)
 
