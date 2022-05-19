@@ -74,7 +74,7 @@ class Scores(commands.Cog):
 
             # Only take the first 15 users
             # TODO: Implement pagination of the leaderboard
-            if place <= 15:
+            if place > 15:
                 break
 
         await ctx.send(embed=leaderboard)
