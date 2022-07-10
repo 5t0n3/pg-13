@@ -31,15 +31,6 @@ class PG13Bot(commands.Bot):
         if not db_path.exists():
             db_path.mkdir()
 
-        # Cogs to load
-        self.cog_list = [
-            "cogs.scores",
-            "cogs.dailies",
-            # "cogs.game_nights",
-            # "cogs.bonus_roles",
-            # "cogs.door_to_darkness",
-        ]
-
     def run(self):
         super().run(self._token, log_handler=None)
 
@@ -57,9 +48,22 @@ class PG13Bot(commands.Bot):
         )
         await self.change_presence(activity=bot_presence, status=discord.Status.idle)
 
+    async def setup_hook(self):
+        cog_list = [
+            "cogs.scores",
+            "cogs.dailies",
+            # "cogs.game_nights",
+            # "cogs.bonus_roles",
+            # "cogs.door_to_darkness",
+        ]
+
+        for cog in cog_list:
+            await self.load_extension(cog)
+
     async def on_ready(self):
         await self.update_presence()
-        for cog in self.cog_list:
-            await self.load_extension(cog)
+
+        # Sync slash commands (for development purposes)
         await self.tree.sync(guild=discord.Object(745332731184939039))
+
         self.logger.info("Now running!")
