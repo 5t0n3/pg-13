@@ -52,7 +52,7 @@ class PG13Bot(commands.Bot):
         cog_list = [
             "cogs.scores",
             "cogs.dailies",
-            # "cogs.game_nights",
+            "cogs.game_nights",
             "cogs.bonus_roles",
             # "cogs.door_to_darkness",
         ]
