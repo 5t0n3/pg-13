@@ -54,7 +54,7 @@ class PG13Bot(commands.Bot):
             "cogs.dailies",
             "cogs.game_nights",
             "cogs.bonus_roles",
-            # "cogs.door_to_darkness",
+            "cogs.door_to_darkness",
         ]
 
         for cog in cog_list:

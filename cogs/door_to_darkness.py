@@ -119,5 +119,5 @@ class DoorToDarkness(commands.Cog):
         self.logger.info("Finished delaying door to darkness claim clear")
 
 
-def setup(bot):
-    bot.add_cog(DoorToDarkness(bot))
+async def setup(bot):
+    await bot.add_cog(DoorToDarkness(bot))
