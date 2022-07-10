@@ -41,7 +41,7 @@ class PG13Bot(commands.Bot):
         ]
 
     def run(self):
-        super().run(self._token)
+        super().run(self._token, log_handler=None)
 
     async def handle_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
