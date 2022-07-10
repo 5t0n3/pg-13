@@ -1,20 +1,16 @@
-from discord_slash.model import SlashCommandPermissionType
-from discord_slash.utils.manage_commands import generate_permissions
+import discord
 import toml
 
 config = toml.load("config.toml")
 
 # Default to registering commands in all guilds with a provided config
-loaded_guilds = {"guild_ids": list(map(int, config["guilds"]))}
+loaded_guilds = list(map(int, config["guilds"]))
 
 # Admin roles/users are configured in config.toml as well
-admin_perms = {
-    "base_default_permission": False,
-    "base_permissions": {
-        int(guild_id): generate_permissions(
-            allowed_roles=guild_config["admins"]["roles"],
-            allowed_users=guild_config["admins"]["users"],
-        )
-        for guild_id, guild_config in config["guilds"].items()
-    },
-}
+async def admin_check(interaction: discord.Interaction):
+    """Returns true if the user attempting to use a command is a bot admin"""
+    guild_admins = config["guilds"][str(interaction.guild_id)]["admins"]
+
+    return interaction.user.id in guild_admins["users"] or not set(
+        map(lambda role: role.id, interaction.user.roles)
+    ).isdisjoint(set(guild_admins["roles"]))

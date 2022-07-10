@@ -4,16 +4,14 @@ import logging
 
 import aiosqlite
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
-from discord_slash import cog_ext
-from discord_slash.model import SlashCommandOptionType as OptionType
-from discord_slash.context import SlashContext
-from discord_slash.utils.manage_commands import create_option
 
-from .slash_config import loaded_guilds, admin_perms
+from .slash_config import loaded_guilds, admin_check
 
 
-class DailyBonuses(commands.Cog):
+@app_commands.guilds(*loaded_guilds)
+class DailyBonuses(commands.GroupCog, group_name="daily"):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.dailies")
@@ -41,85 +39,82 @@ class DailyBonuses(commands.Cog):
         self.logger.info("Successfully initialized all guild daily tables.")
 
     # DAILY BONUS COMMAND
-    @cog_ext.cog_subcommand(
-        base="daily",
+    @app_commands.command(
         name="claim",
         description="Claim a daily reward of some points.",
-        **loaded_guilds,
     )
-    async def daily_claim(self, ctx: SlashContext):
+    async def daily_claim(self, interaction: discord.Interaction):
         async with aiosqlite.connect("databases/dailies.db") as dailies:
             # Check if user has already claimed today's bonus
             user_request = await dailies.execute(
-                f"SELECT * FROM bonus_{ctx.guild_id} WHERE user = ?", (ctx.author_id,)
+                f"SELECT * FROM bonus_{interaction.guild_id} WHERE user = ?",
+                (interaction.user.id,),
             )
             user_claimed = await user_request.fetchone()
 
             if user_claimed is not None:
-                self.logger.info(f"User {ctx.author.name} already claimed bonus today")
-                return await ctx.send("You've already claimed today's daily reward!")
+                self.logger.debug(
+                    f"User {interaction.user.name} already claimed bonus today"
+                )
+                return await interaction.response.send_message(
+                    "You've already claimed today's daily reward!", ephemeral=True
+                )
 
             # Give user points if they haven't claimed it
             # TODO: confirm point amount
             if (scores_cog := self.bot.get_cog("Scores")) is not None:
-                await scores_cog.update_scores(ctx.author, 3)
+                await scores_cog.update_scores(interaction.user, 3)
 
             # Update daily claim table for guild
             await dailies.execute(
-                f"INSERT INTO bonus_{ctx.guild_id} VALUES(?)", (ctx.author_id,)
+                f"INSERT INTO bonus_{interaction.guild_id} VALUES(?)",
+                (interaction.user.id,),
             )
             await dailies.commit()
 
-        await ctx.send("Succesfully claimed your daily bonus!")
+        await interaction.response.send_message("Succesfully claimed your daily bonus!")
 
     # CHANNEL DAILY BONUSES
-    @cog_ext.cog_subcommand(
-        base="bonus",
+    @app_commands.command(
         name="attach",
         description="Attach a daily point bonus to messages in a channel.",
-        options=[
-            create_option(
-                name="channel",
-                description="The channel to reward daily messages in",
-                option_type=OptionType.CHANNEL,
-                required=True,
-            ),
-            create_option(
-                name="bonus",
-                description="The amount of bonus points to give for a message (default 1).",
-                option_type=OptionType.INTEGER,
-                required=False,
-            ),
-            create_option(
-                name="attachment",
-                description="Whether an attachment (e.g. image or link) is necessary to get the bonus (default false).",
-                option_type=OptionType.BOOLEAN,
-                required=False,
-            ),
-        ],
-        **loaded_guilds,
-        **admin_perms,
     )
-    async def bonus_attach(self, ctx: SlashContext, channel, bonus=1, attachment=False):
+    @app_commands.describe(
+        channel="Channel to reward messages in",
+        bonus="Number of bonus points",
+        attachment="Whether to require an attachment to get points",
+    )
+    @app_commands.check(admin_check)
+    async def attach_bonus(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel,
+        bonus: int = 1,
+        attachment: bool = False,
+    ):
         if not isinstance(channel, discord.TextChannel):
-            return await ctx.send(
-                "Please supply a text channel, not a voice channel or category!"
+            return await interaction.response.send_message(
+                "Please supply a text channel, not a voice channel or category!",
+                ephemeral=True,
             )
 
         async with aiosqlite.connect("databases/dailies.db") as dailies:
             # Ensure channel doesn't already have a daily bonus
             exists_request = await dailies.execute(
-                f"SELECT * FROM guild_{ctx.guild_id} WHERE channel = ?", (channel.id,)
+                f"SELECT * FROM guild_{interaction.guild_id} WHERE channel = ?",
+                (channel.id,),
             )
             entry_exists = await exists_request.fetchone()
 
             if entry_exists is not None:
-                return await ctx.send(f"#{channel} already has a daily point reward!")
+                return await interaction.response.send_message(
+                    f"#{channel} already has a daily point reward!", ephemeral=True
+                )
 
             else:
                 # Update guild table with bonus
                 await dailies.execute(
-                    f"INSERT INTO guild_{ctx.guild_id} VALUES (?, ?, ?)",
+                    f"INSERT INTO guild_{interaction.guild_id} VALUES (?, ?, ?)",
                     (channel.id, bonus, attachment),
                 )
 
@@ -131,52 +126,53 @@ class DailyBonuses(commands.Cog):
             # Commit all changes
             await dailies.commit()
 
-        await ctx.send(f"Successfully added {bonus}-point daily bonus to #{channel}!")
+        await interaction.response.send_message(
+            f"Successfully added {bonus}-point daily bonus to #{channel}!",
+            ephemeral=True,
+        )
 
-    @cog_ext.cog_subcommand(
-        base="bonus",
-        name="detach",
-        description="Remove a daily message bonus from a text channel.",
-        options=[
-            create_option(
-                name="channel",
-                description="The channel to remove a bonus from.",
-                option_type=OptionType.CHANNEL,
-                required=True,
-            )
-        ],
-        **loaded_guilds,
+    @app_commands.command(
+        name="remove", description="Remove a daily message bonus from a text channel."
     )
-    async def bonus_detach(self, ctx: SlashContext, channel):
+    @app_commands.describe(channel="Channel to remove bonus from")
+    @app_commands.check(admin_check)
+    async def bonus_remove(
+        self, interaction: discord.Interaction, channel: discord.TextChannel
+    ):
         # Bonuses can only be attached to text channels
         if not isinstance(channel, discord.TextChannel):
             self.logger.info(f"Channel {channel.name} was not a text channel")
-            return await ctx.send(
-                "Please supply a text channel, not a voice channel or category!"
+            return await interaction.response.send_message(
+                "Please supply a text channel, not a voice channel or category!",
+                ephemeral=True,
             )
 
         async with aiosqlite.connect("databases/dailies.db") as dailies:
             channel_request = await dailies.execute(
-                f"SELECT channel FROM guild_{ctx.guild_id} WHERE channel = ?",
+                f"SELECT channel FROM guild_{interaction.guild_id} WHERE channel = ?",
                 (channel.id,),
             )
             channel_exists = await channel_request.fetchone()
 
             # If the daily doesn't exist, the above query returns None
             if channel_exists is None:
-                return await ctx.send(
+                return await interaction.response.send_message(
                     f"{channel.mention} doesn't have a daily bonus attached to it!"
                 )
 
             # Delete channel's claim table & entry in guild table
             await dailies.execute(f"DROP TABLE channel_{channel.id}")
             await dailies.execute(
-                f"DELETE FROM guild_{ctx.guild_id} WHERE channel = ?", (channel.id,)
+                f"DELETE FROM guild_{interaction.guild_id} WHERE channel = ?",
+                (channel.id,),
             )
 
             await dailies.commit()
 
-        await ctx.send(f"Succesfully detached daily bonus from channel {channel.name}!")
+        await interaction.response.send_message(
+            f"Succesfully detached daily bonus from channel {channel.name}!",
+            ephemeral=True,
+        )
         self.logger.info(
             f"Succesfully detached daily bonus from channel {channel.name}"
         )
@@ -276,5 +272,5 @@ class DailyBonuses(commands.Cog):
         self.logger.info("Finished delaying claim clear")
 
 
-def setup(bot):
-    bot.add_cog(DailyBonuses(bot))
+async def setup(bot):
+    await bot.add_cog(DailyBonuses(bot))
