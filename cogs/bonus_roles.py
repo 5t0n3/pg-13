@@ -2,10 +2,6 @@ import logging
 
 import aiosqlite
 from discord.ext import commands
-from discord_slash import cog_ext
-from discord_slash.context import SlashContext
-from discord_slash.model import SlashCommandOptionType as OptionType
-from discord_slash.utils.manage_commands import create_option, create_choice
 
 
 class BonusRoles(commands.Cog):
@@ -101,5 +97,5 @@ class BonusRoles(commands.Cog):
             )
 
 
-def setup(bot):
-    bot.add_cog(BonusRoles(bot))
+async def setup(bot):
+    await bot.add_cog(BonusRoles(bot))
