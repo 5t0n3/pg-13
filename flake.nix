@@ -69,9 +69,10 @@
             };
 
             config = mkIf cfg.enable {
-              users.users.pg13 = {
+              users.users.pg-13 = {
                 isSystemUser = true;
-                home = /var/lib/pg13;
+                group = "pg-13";
+                home = /var/lib/pg-13;
               };
 
               systemd.services.pg13bot = {
@@ -82,8 +83,8 @@
                 wantedBy = [ "multi-user.target" ];
 
                 serviceConfig = {
-                  User = "pg13";
-                  WorkingDirectory = /var/lib/pg13;
+                  User = "pg-13";
+                  WorkingDirectory = /var/lib/pg-13;
                   # TODO: Read config path from environment variable when running bot
                   ExecStart = (if cfg.configFile != null then
                     "CONFIG_PATH=${cfg.configFile} "
