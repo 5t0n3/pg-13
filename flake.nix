@@ -46,6 +46,10 @@
           };
         };
 
+        devShells.default = pkgs.mkShell { packages = [ packages.pg-13 ]; };
+
+        formatter = pkgs.nixfmt;
+      }) // {
         nixosModules.pg13-service = { config }:
           with nixpkgs.lib;
           let cfg = config.services.pg13bot;
@@ -89,9 +93,5 @@
               };
             };
           };
-
-        devShells.default = pkgs.mkShell { packages = [ packages.pg-13 ]; };
-
-        formatter = pkgs.nixfmt;
-      });
+      };
 }
