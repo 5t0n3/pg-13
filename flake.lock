@@ -3,11 +3,11 @@
     "discordpy-git": {
       "flake": false,
       "locked": {
-        "lastModified": 1657264052,
-        "narHash": "sha256-pF4Ui4FJDGgJS8BQGr9DwAPCu2iL9u+BRYko77c8e8g=",
+        "lastModified": 1657533907,
+        "narHash": "sha256-U9378EG3Y1MQ4I1ZDC1zVzJWTB6v53vdshHSDaPMgvQ=",
         "owner": "Rapptz",
         "repo": "discord.py",
-        "rev": "a8a6bf4f6c9d6cb71a23bf2079c410aeb1407a8b",
+        "rev": "e0341c9ef25c0093bff991ff09c87dba0414e58c",
         "type": "github"
       },
       "original": {
@@ -18,11 +18,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1657114324,
-        "narHash": "sha256-fWuaUNXrHcz/ciHRHlcSO92dvV3EVS0GJQUSBO5JIB4=",
+        "lastModified": 1657447684,
+        "narHash": "sha256-FCP9AuU1q6PE3vOeM5SFf58f/UKPBAsoSGDUGamNBbo=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "a5c867d9fe9e4380452628e8f171c26b69fa9d3d",
+        "rev": "5f43d8b088d3771274bcfb69d3c7435b1121ac88",
         "type": "github"
       },
       "original": {

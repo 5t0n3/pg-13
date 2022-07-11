@@ -3,33 +3,24 @@ import logging.handlers as handlers
 import os
 import pathlib
 
+from systemd import journal
+
 from . import bot
 
 
 def run_bot():
-    # Ensure log file directory exists
-    log_path = pathlib.Path("./logs/")
-    if not log_path.exists():
-        log_path.mkdir()
+    systemd_handler = journal.JournalHandler(SYSLOG_IDENTIFIER="pg-13")
+    systemd_handler.setLevel("INFO")
 
-    # Rotate log files every 24 hours (at midnight)
-    rotating_handler = handlers.TimedRotatingFileHandler(
-        filename="logs/discord.log", when="midnight", encoding="utf8"
-    )
-
-    # Use INFO logging level
-    rotating_handler.setLevel("INFO")
-
-    # Set up custom logging format
     log_format = logging.Formatter(
         fmt="[{levelname}] ({name}:{lineno}) {asctime}: {message}",
         style="{",
     )
-    rotating_handler.setFormatter(log_format)
+    systemd_handler.setFormatter(log_format)
 
     # Add handler to root logger
     root_logger = logging.getLogger()
-    root_logger.addHandler(rotating_handler)
+    root_logger.addHandler(systemd_handler)
 
     # Make sure root logger is also set to INFO logging level
     root_logger.setLevel("INFO")

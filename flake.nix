@@ -15,7 +15,7 @@
         pythonPkgs = pkgs.python310.pkgs;
       in rec {
         packages = {
-          discordpy-dev = pythonPkgs.buildPythonPackage rec {
+          discordpy-dev = pythonPkgs.buildPythonPackage {
             pname = "discord.py";
             version = "2.0.0a";
             src = discordpy-git;
@@ -39,6 +39,7 @@
             buildInputs = with pythonPkgs; [ typing-extensions ];
             propagatedBuildInputs = with pythonPkgs; [
               aiosqlite
+              systemd
               toml
               packages.discordpy-dev
             ];
