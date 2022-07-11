@@ -85,10 +85,10 @@
 
                 serviceConfig = {
                   User = "pg-13";
-                  WorkingDirectory = /var/lib/pg-13;
+                  WorkingDirectory = "/var/lib/pg-13";
                   # TODO: Read config path from environment variable when running bot
                   ExecStart = (if cfg.configFile != null then
-                    "CONFIG_PATH=${cfg.configFile} "
+                    "CONFIG_PATH=\"${cfg.configFile} \""
                   else
                     "") + "${self.packages.x86_64-linux.pg-13}/bin/pg-13";
                 };
