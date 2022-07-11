@@ -38,7 +38,6 @@
 
             buildInputs = with pythonPkgs; [ typing-extensions ];
             propagatedBuildInputs = with pythonPkgs; [
-              # Direct dependencies
               aiosqlite
               toml
               packages.discordpy-dev
@@ -50,7 +49,7 @@
 
         formatter = pkgs.nixfmt;
       }) // {
-        nixosModules.pg13-service = { config , ... }:
+        nixosModules.pg13-service = { config, ... }:
           with nixpkgs.lib;
           let cfg = config.services.pg13bot;
           in {
@@ -62,13 +61,13 @@
               };
 
               configFile = mkOption {
-                type = with types; nullOr path;
-                default = null;
+                type = types.path;
                 description = "The path to the PG-13 bot configuration.";
               };
             };
 
             config = mkIf cfg.enable {
+              users.groups.pg-13 = { };
               users.users.pg-13 = {
                 isSystemUser = true;
                 group = "pg-13";
