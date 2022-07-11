@@ -3,7 +3,7 @@
 __pycache__/
 
 # Configuration
-*.toml
+config.toml
 
 # Bot-generated files
 *.db

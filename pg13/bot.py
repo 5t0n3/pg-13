@@ -50,11 +50,11 @@ class PG13Bot(commands.Bot):
 
     async def setup_hook(self):
         cog_list = [
-            "cogs.scores",
-            "cogs.dailies",
-            "cogs.game_nights",
-            "cogs.bonus_roles",
-            "cogs.door_to_darkness",
+            "pg13.cogs.scores",
+            "pg13.cogs.dailies",
+            "pg13.cogs.game_nights",
+            "pg13.cogs.bonus_roles",
+            "pg13.cogs.door_to_darkness",
         ]
 
         for cog in cog_list:
