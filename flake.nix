@@ -46,7 +46,7 @@
           };
         };
 
-        nixosModules = { config }:
+        nixosModules.pg13-service = { config }:
           with nixpkgs.lib;
           let cfg = config.services.pg13bot;
           in {
