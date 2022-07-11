@@ -1,5 +1,6 @@
 import logging
 import logging.handlers as handlers
+import os
 import pathlib
 
 from . import bot
@@ -33,5 +34,6 @@ def run_bot():
     # Make sure root logger is also set to INFO logging level
     root_logger.setLevel("INFO")
 
-    pg13_bot = bot.PG13Bot("config.toml")
+    config_path = os.environ.get("CONFIG_PATH") or "config.toml"
+    pg13_bot = bot.PG13Bot(config_path)
     pg13_bot.run()

@@ -82,7 +82,7 @@
                   WorkingDirectory = /var/lib/pg13;
                   # TODO: Read config path from environment variable when running bot
                   ExecStart = (if cfg.configFile != null then
-                    "CONFIG=${cfg.configFile} "
+                    "CONFIG_PATH=${cfg.configFile} "
                   else
                     "") + "${packages.pg-13}/bin/pg-13";
                 };
