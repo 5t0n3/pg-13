@@ -73,6 +73,7 @@
                 isSystemUser = true;
                 group = "pg-13";
                 home = /var/lib/pg-13;
+                createHome = true;
               };
 
               systemd.services.pg13bot = {
