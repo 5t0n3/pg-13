@@ -72,7 +72,7 @@
               users.users.pg-13 = {
                 isSystemUser = true;
                 group = "pg-13";
-                home = /var/lib/pg-13;
+                home = "/var/lib/pg-13";
                 createHome = true;
               };
 
