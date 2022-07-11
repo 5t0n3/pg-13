@@ -89,7 +89,7 @@
                   ExecStart = (if cfg.configFile != null then
                     "CONFIG_PATH=${cfg.configFile} "
                   else
-                    "") + "${packages.pg-13}/bin/pg-13";
+                    "") + "${self.packages.x86_64-linux.pg-13}/bin/pg-13";
                 };
               };
             };
