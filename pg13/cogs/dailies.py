@@ -141,7 +141,7 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
     ):
         # Bonuses can only be attached to text channels
         if not isinstance(channel, discord.TextChannel):
-            self.logger.info(f"Channel {channel.name} was not a text channel")
+            self.logger.debug(f"Channel {channel.name} was not a text channel")
             return await interaction.response.send_message(
                 "Please supply a text channel, not a voice channel or category!",
                 ephemeral=True,
@@ -173,14 +173,14 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
             f"Succesfully detached daily bonus from channel {channel.name}!",
             ephemeral=True,
         )
-        self.logger.info(
+        self.logger.debug(
             f"Succesfully detached daily bonus from channel {channel.name}"
         )
 
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot:
-            self.logger.info(f"Message {message.id} was a bot message")
+            self.logger.debug(f"Message {message.id} was a bot message")
 
         else:
             # Give user daily bonus if applicable
@@ -201,7 +201,7 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
 
                     # Check for message attachment if required
                     if channel_bonus[1] and not (message.attachments or message.embeds):
-                        self.logger.info(
+                        self.logger.debug(
                             f"User {message.author.name} didn't provide necessary attachment/embeds"
                         )
 
@@ -222,12 +222,12 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
                         )
                         await dailies.commit()
 
-                        self.logger.info(
+                        self.logger.debug(
                             f"Added user {message.author.name} to claimed table for {message.channel.name}"
                         )
 
                     else:
-                        self.logger.info(
+                        self.logger.debug(
                             f"User {message.author.name} already claimed daily"
                         )
 
@@ -267,9 +267,9 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
         if now.hour >= hour and now.minute >= minute:
             future += datetime.timedelta(days=1)
 
-        self.logger.info("Delaying claim clear until proper time")
+        self.logger.debug("Delaying claim clear until proper time")
         await asyncio.sleep((future - now).seconds)
-        self.logger.info("Finished delaying claim clear")
+        self.logger.debug("Finished delaying claim clear")
 
 
 async def setup(bot):

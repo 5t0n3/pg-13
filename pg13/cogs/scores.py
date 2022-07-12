@@ -188,7 +188,7 @@ class Scores(commands.Cog):
         await interaction.response.send(
             f"Successfully updated {user.name}'s score to **{points}**!"
         )
-        self.logger.info(f"Successfully updated {user.name}'s score to {points}")
+        self.logger.debug(f"Successfully updated {user.name}'s score to {points}")
 
     @score_group.command(
         name="adjust", description="Give points to or take points away from a user."
@@ -221,7 +221,7 @@ class Scores(commands.Cog):
                 f"Took {-points} points from {user.name}!"
             )
 
-        self.logger.debug(f"Changed {user.name}'s cumulative score by {points} points.")
+        self.logger.debug(f"Changed {user.name}'s score by {points} points.")
 
     # TODO: add a reason parameter for logging purposes
     async def update_scores(self, member, points, update_roles=True):
@@ -246,7 +246,7 @@ class Scores(commands.Cog):
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(member.guild)
 
-        self.logger.info(
+        self.logger.debug(
             f"Updated {member.name}'s cumulative score to {new_cumulative}"
         )
 
