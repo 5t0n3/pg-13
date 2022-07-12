@@ -52,7 +52,7 @@
           with nixpkgs.lib;
           let cfg = config.services.pg-13;
           in {
-            options.services.pg13bot = {
+            options.services.pg-13 = {
               enable = mkOption {
                 type = types.bool;
                 default = false;
