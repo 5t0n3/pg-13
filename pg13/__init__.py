@@ -1,11 +1,9 @@
 import logging
-import logging.handlers as handlers
 import os
-import pathlib
 
 from systemd import journal
 
-from . import bot
+from .bot import PG13Bot
 
 
 def run_bot():

@@ -83,7 +83,9 @@ class DoorToDarkness(commands.Cog):
         # Assuming all of the above conditions are met, give the message author one point
         if (scores := self.bot.get_cog("Scores")) is not None:
             await scores.update_scores(message.author, 1)
-            self.logger.debug(f"User {message.author.id} claimed door to darkness point")
+            self.logger.debug(
+                f"User {message.author.id} claimed door to darkness point"
+            )
 
         # Update the claim database so each user only gets one point from this a day
         async with aiosqlite.connect("databases/dailies.db") as dailies:

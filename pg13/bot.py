@@ -19,11 +19,15 @@ class PG13Bot(commands.Bot):
 
         # Initialize discord.py side of bot
         bot_intents = discord.Intents(
-            guild_messages=True, voice_states=True, guilds=True, members=True
+            guild_messages=True,
+            voice_states=True,
+            guilds=True,
+            members=True,
+            message_content=True,
         )
         super().__init__(command_prefix=config["prefix"], intents=bot_intents)
 
-        # Set up slash commands
+        # Set up slash command error handler
         self.tree.on_error = self.handle_command_error
 
         # Ensure database folder exists
@@ -33,6 +37,24 @@ class PG13Bot(commands.Bot):
 
     def run(self):
         super().run(self._token, log_handler=None)
+
+    async def setup_hook(self):
+        cog_list = [
+            "pg13.cogs.scores",
+            "pg13.cogs.dailies",
+            "pg13.cogs.game_nights",
+            "pg13.cogs.bonus_roles",
+            "pg13.cogs.door_to_darkness",
+            "pg13.cogs.sync",
+        ]
+
+        for cog in cog_list:
+            await self.load_extension(cog)
+
+    async def on_ready(self):
+        await self.update_presence()
+
+        self.logger.info("Now running!")
 
     async def handle_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
@@ -47,23 +69,3 @@ class PG13Bot(commands.Bot):
             name="your every mov(i)e :)", type=discord.ActivityType.watching
         )
         await self.change_presence(activity=bot_presence, status=discord.Status.idle)
-
-    async def setup_hook(self):
-        cog_list = [
-            "pg13.cogs.scores",
-            "pg13.cogs.dailies",
-            "pg13.cogs.game_nights",
-            "pg13.cogs.bonus_roles",
-            "pg13.cogs.door_to_darkness",
-        ]
-
-        for cog in cog_list:
-            await self.load_extension(cog)
-
-    async def on_ready(self):
-        await self.update_presence()
-
-        # Sync slash commands (for development purposes)
-        await self.tree.sync(guild=discord.Object(745332731184939039))
-
-        self.logger.info("Now running!")
