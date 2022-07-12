@@ -7,10 +7,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from .slash_config import loaded_guilds, admin_check
+from .cog_config import configured_guilds, admin_check
 
 
-@app_commands.guilds(*loaded_guilds)
+@app_commands.guilds(*configured_guilds)
 class DailyBonuses(commands.GroupCog, group_name="daily"):
     def __init__(self, bot):
         self.bot = bot

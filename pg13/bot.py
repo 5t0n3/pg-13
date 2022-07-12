@@ -25,7 +25,9 @@ class PG13Bot(commands.Bot):
             members=True,
             message_content=True,
         )
-        super().__init__(command_prefix=config["prefix"], intents=bot_intents)
+        super().__init__(
+            command_prefix=config["prefix"], intents=bot_intents, help_command=None
+        )
 
         # Set up slash command error handler
         self.tree.on_error = self.handle_command_error

@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .slash_config import loaded_guilds, admin_check
+from .cog_config import configured_guilds, admin_check
 
 
 class Scores(commands.Cog):
@@ -14,7 +14,9 @@ class Scores(commands.Cog):
         self.logger = logging.getLogger("pg13.scores")
 
     score_group = app_commands.Group(
-        name="score", description="Score manipulation commands", guild_ids=loaded_guilds
+        name="score",
+        description="Score manipulation commands",
+        guild_ids=configured_guilds,
     )
 
     @commands.Cog.listener()
@@ -36,7 +38,7 @@ class Scores(commands.Cog):
         name="leaderboard",
         description="Display the score leaderboard for the current server.",
     )
-    @app_commands.guilds(*loaded_guilds)
+    @app_commands.guilds(*configured_guilds)
     async def leaderboard(self, interaction: discord.Interaction):
         # Fetch top 15 guild scores
         async with aiosqlite.connect("databases/scores.db") as scores:
@@ -84,7 +86,7 @@ class Scores(commands.Cog):
         name="total",
         description="Check the total amount of points of members in this server.",
     )
-    @app_commands.guilds(*loaded_guilds)
+    @app_commands.guilds(*configured_guilds)
     async def total(self, interaction: discord.Interaction):
         guild_total = 0
 
@@ -105,7 +107,7 @@ class Scores(commands.Cog):
         description="Display a user's rank & score in this server.",
     )
     @app_commands.describe(user="The user to display the rank of (default you).")
-    @app_commands.guilds(*loaded_guilds)
+    @app_commands.guilds(*configured_guilds)
     async def rank(self, interaction: discord.Interaction, user: discord.Member = None):
         if user is None:
             user = interaction.user
@@ -146,22 +148,6 @@ class Scores(commands.Cog):
     @score_group.command(
         name="set",
         description="Set a user's score to a specific value.",
-        # options=[
-        #     create_option(
-        #         name="user",
-        #         description="The user whose score to set.",
-        #         option_type=OptionType.USER,
-        #         required=True,
-        #     ),
-        #     create_option(
-        #         name="points",
-        #         description="The user's new score.",
-        #         option_type=OptionType.INTEGER,
-        #         required=True,
-        #     ),
-        # ],
-        # **loaded_guilds,
-        # **admin_perms,
     )
     async def score_set(
         self, interaction: discord.Interaction, user: discord.Member, points: int

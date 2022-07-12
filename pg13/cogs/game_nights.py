@@ -6,10 +6,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .slash_config import loaded_guilds
+from .cog_config import configured_guilds
 
 
-@app_commands.guilds(*loaded_guilds)
+@app_commands.guilds(*configured_guilds)
 class GameNights(commands.GroupCog, group_name="gamenight"):
     def __init__(self, bot):
         self.bot = bot
