@@ -25,9 +25,6 @@
             propagatedBuildInputs = [ pythonPkgs.aiohttp ];
           };
 
-          # botPython = pkgs.python310.withPackages
-          #   (ps: [ packages.discordpy-dev ps.aiosqlite ps.toml ps.black ]);
-
           pg-13 = pythonPkgs.buildPythonPackage {
             pname = "pg13";
             version = "1.0.0";
@@ -46,11 +43,11 @@
           };
         };
 
-        devShells.default = pkgs.mkShell { packages = [ packages.pg-13 ]; };
+        devShells.default = pkgs.mkShell { packages = [ packages.pg-13 pkgs.black ]; };
 
         formatter = pkgs.nixfmt;
-      }) // {
-        nixosModules.pg13-service = { config, ... }:
+
+        nixosModules.default = { config, ... }:
           with nixpkgs.lib;
           let cfg = config.services.pg13bot;
           in {
@@ -62,8 +59,9 @@
               };
 
               configFile = mkOption {
-                type = types.path;
-                description = "The path to the PG-13 bot configuration.";
+                type = with types; nullOr path;
+                default = null;
+                description = "The path to the PG-13 bot configuration (defaults to config.toml in the working directory).";
               };
             };
 
@@ -76,7 +74,7 @@
                 createHome = true;
               };
 
-              systemd.services.pg13bot = {
+              systemd.services.pg-13 = {
                 enable = true;
                 description = "the PG-13 point system bot";
                 wants = [ "network-online.target" ];
@@ -86,11 +84,12 @@
                 serviceConfig = {
                   User = "pg-13";
                   WorkingDirectory = "/var/lib/pg-13";
+                  ExecStart = "${packages.pg-13}/bin/pg-13";
+                } // (if cfg.configFile != null then {
                   Environment = "CONFIG_PATH=${cfg.configFile}";
-                  ExecStart = "${self.packages.x86_64-linux.pg-13}/bin/pg-13";
-                };
+                } else {});
               };
             };
           };
-      };
+      });
 }
