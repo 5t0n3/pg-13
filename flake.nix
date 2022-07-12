@@ -43,13 +43,14 @@
           };
         };
 
-        devShells.default = pkgs.mkShell { packages = [ packages.pg-13 pkgs.black ]; };
+        devShells.default =
+          pkgs.mkShell { packages = [ packages.pg-13 pkgs.black ]; };
 
         formatter = pkgs.nixfmt;
 
         nixosModules.default = { config, ... }:
           with nixpkgs.lib;
-          let cfg = config.services.pg13bot;
+          let cfg = config.services.pg-13;
           in {
             options.services.pg13bot = {
               enable = mkOption {
@@ -61,7 +62,8 @@
               configFile = mkOption {
                 type = with types; nullOr path;
                 default = null;
-                description = "The path to the PG-13 bot configuration (defaults to config.toml in the working directory).";
+                description =
+                  "The path to the PG-13 bot configuration (defaults to config.toml in the working directory).";
               };
             };
 
@@ -87,7 +89,8 @@
                   ExecStart = "${packages.pg-13}/bin/pg-13";
                 } // (if cfg.configFile != null then {
                   Environment = "CONFIG_PATH=${cfg.configFile}";
-                } else {});
+                } else
+                  { });
               };
             };
           };
