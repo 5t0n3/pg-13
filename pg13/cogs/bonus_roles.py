@@ -2,10 +2,6 @@ import logging
 
 import aiosqlite
 from discord.ext import commands
-from discord_slash import cog_ext
-from discord_slash.context import SlashContext
-from discord_slash.model import SlashCommandOptionType as OptionType
-from discord_slash.utils.manage_commands import create_option, create_choice
 
 
 class BonusRoles(commands.Cog):
@@ -75,12 +71,12 @@ class BonusRoles(commands.Cog):
             # Remove ousted user's regular role
             thirteenth_place = guild.get_member(last_id)
             await thirteenth_place.remove_roles(bonus_role, reason="Lost bonus role")
-            self.logger.info(f"User {thirteenth_place.name} lost bonus role")
+            self.logger.debug(f"User {thirteenth_place.name} lost bonus role")
 
             # Add new last place user's regular role
             if (new_last := guild.get_member(top_users[-1])) is not None:
                 await new_last.add_roles(bonus_role, reason="Gained bonus role")
-                self.logger.info(f"User {member.name} gained bonus role")
+                self.logger.debug(f"User {member.name} gained bonus role")
 
                 # Scores cog is a prerequisite; if this errors you have bigger
                 # problems than a cog being None
@@ -96,10 +92,10 @@ class BonusRoles(commands.Cog):
                 self.logger.warn(f"User {last_id} not in guild {guild.name}")
 
         else:
-            self.logger.info(
+            self.logger.debug(
                 f"Bonus roles didn't have to be updated in guild {guild.name}"
             )
 
 
-def setup(bot):
-    bot.add_cog(BonusRoles(bot))
+async def setup(bot):
+    await bot.add_cog(BonusRoles(bot))

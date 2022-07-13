@@ -3,15 +3,14 @@ import logging
 
 import aiosqlite
 import discord
+from discord import app_commands
 from discord.ext import commands
-from discord_slash import cog_ext
-from discord_slash.model import SlashCommandOptionType as OptionType
-from discord_slash.context import SlashContext
 
-from .slash_config import loaded_guilds
+from .cog_config import configured_guilds
 
 
-class GameNights(commands.Cog):
+@app_commands.guilds(*configured_guilds)
+class GameNights(commands.GroupCog, group_name="gamenight"):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.gamenights")
@@ -85,9 +84,13 @@ class GameNights(commands.Cog):
 
                     await gamenights.commit()
 
-                self.logger.info(
+                self.logger.debug(
                     f"User {member.name} left channel {before.channel.name}"
                 )
+
+                # Automatically end game night if everyone leaves a channel
+                if not before.channel.members:
+                    await self.end_gamenight(before.channel)
 
             # User joined a game night channel
             if after_has_gamenight is not None:
@@ -103,13 +106,9 @@ class GameNights(commands.Cog):
 
                     await gamenights.commit()
 
-                self.logger.info(
+                self.logger.debug(
                     f"User {member.name} joined channel {after.channel.name}"
                 )
-
-        # Automatically end game night if everyone leaves a channel
-        if not before.channel.members:
-            await self.end_gamenight(before.channel)
 
     async def end_gamenight(self, channel):
         async with aiosqlite.connect("databases/gamenights.db") as gamenights:
@@ -176,7 +175,7 @@ class GameNights(commands.Cog):
             host = channel.guild.get_member(summary_info[1])
             await scores.update_scores(host, 17)
 
-        self.logger.info(f"Cleaned up game night in channel {channel.name}")
+        self.logger.debug(f"Cleaned up game night in channel {channel.name}")
 
         # Turn member times into an embed
         await self.send_summary(summary_channel, channel, member_times)
@@ -196,20 +195,19 @@ class GameNights(commands.Cog):
             title=f"Game night summary - {voice_channel.name}", description=embed_desc
         )
         await summary_channel.send(embed=summary)
-        self.logger.info(
+        self.logger.debug(
             f"Sent summary embed in {summary_channel.name} for game night in {voice_channel.name}"
         )
 
-    @cog_ext.cog_subcommand(
-        base="gamenight",
+    @app_commands.command(
         name="host",
         description="Start a game night in your current voice channel.",
-        **loaded_guilds,
     )
-    async def gamenight_host(self, ctx: SlashContext):
-        if (voice_state := ctx.author.voice) is None:
-            return await ctx.send(
-                "You need to be in a voice channel to start a game night!"
+    async def gamenight_host(self, interaction: discord.Interaction):
+        if (voice_state := interaction.user.voice) is None:
+            return await interaction.response.send_message(
+                "You need to be in a voice channel to start a game night!",
+                ephemeral=True,
             )
 
         # TODO: Ensure one user doesn't host multiple game nights at once
@@ -220,8 +218,8 @@ class GameNights(commands.Cog):
         async with aiosqlite.connect("databases/gamenights.db") as gamenights:
             # Add host/voice channel to guild game night table
             await gamenights.execute(
-                f"INSERT INTO guild_{ctx.guild_id} VALUES(?, ?, ?)",
-                (gamenight_channel.id, ctx.author_id, ctx.channel_id),
+                f"INSERT INTO guild_{interaction.guild_id} VALUES(?, ?, ?)",
+                (gamenight_channel.id, interaction.user.id, interaction.channel_id),
             )
 
             # Initialize game-night-specific table
@@ -239,12 +237,14 @@ class GameNights(commands.Cog):
 
             await gamenights.commit()
 
-        await ctx.send(f"Started game night in voice channel {gamenight_channel.name}!")
+        await interaction.response.send_message(
+            f"Started game night in voice channel {gamenight_channel.name}!"
+        )
         self.logger.info(
             f"Successfully started game night in channel {gamenight_channel.name} "
             f"with {len(gamenight_channel.members)} initial users"
         )
 
 
-def setup(bot):
-    bot.add_cog(GameNights(bot))
+async def setup(bot):
+    await bot.add_cog(GameNights(bot))

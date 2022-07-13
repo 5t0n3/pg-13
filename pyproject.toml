@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pg13"
+version = "1.0.0"
+dependencies = [
+  "discord.py",
+  "aiosqlite",
+  "toml"
+]
+
+[project.scripts]
+pg-13 = "pg13:run_bot"

@@ -1,0 +1,60 @@
+{
+  "nodes": {
+    "discordpy-git": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1657533907,
+        "narHash": "sha256-U9378EG3Y1MQ4I1ZDC1zVzJWTB6v53vdshHSDaPMgvQ=",
+        "owner": "Rapptz",
+        "repo": "discord.py",
+        "rev": "e0341c9ef25c0093bff991ff09c87dba0414e58c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Rapptz",
+        "repo": "discord.py",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1657447684,
+        "narHash": "sha256-FCP9AuU1q6PE3vOeM5SFf58f/UKPBAsoSGDUGamNBbo=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "5f43d8b088d3771274bcfb69d3c7435b1121ac88",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "discordpy-git": "discordpy-git",
+        "nixpkgs": "nixpkgs",
+        "utils": "utils"
+      }
+    },
+    "utils": {
+      "locked": {
+        "lastModified": 1656928814,
+        "narHash": "sha256-RIFfgBuKz6Hp89yRr7+NR5tzIAbn52h8vT6vXkYjZoM=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "7e2a3b3dfd9af950a856d66b0a7d01e3c18aa249",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

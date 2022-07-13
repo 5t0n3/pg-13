@@ -2,19 +2,22 @@ import logging
 
 import aiosqlite
 import discord
+from discord import app_commands
 from discord.ext import commands
-from discord_slash import cog_ext
-from discord_slash.model import SlashCommandOptionType as OptionType
-from discord_slash.context import SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
 
-from .slash_config import loaded_guilds, admin_perms
+from .cog_config import configured_guilds, admin_check
 
 
 class Scores(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.scores")
+
+    score_group = app_commands.Group(
+        name="score",
+        description="Score manipulation commands",
+        guild_ids=configured_guilds,
+    )
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -31,19 +34,19 @@ class Scores(commands.Cog):
             await scores.commit()
         self.logger.info("Successfully initialized all guild score tables.")
 
-    @cog_ext.cog_slash(
+    @app_commands.command(
         name="leaderboard",
         description="Display the score leaderboard for the current server.",
-        **loaded_guilds,
     )
-    async def leaderboard(self, ctx: SlashContext):
+    @app_commands.guilds(*configured_guilds)
+    async def leaderboard(self, interaction: discord.Interaction):
         # Fetch top 15 guild scores
         async with aiosqlite.connect("databases/scores.db") as scores:
             user_scores = await scores.execute_fetchall(
-                f"SELECT user, cumulative FROM guild_{ctx.guild_id} ORDER BY cumulative DESC"
+                f"SELECT user, cumulative FROM guild_{interaction.guild_id} ORDER BY cumulative DESC"
             )
 
-        guild = self.bot.get_guild(ctx.guild_id)
+        guild = self.bot.get_guild(interaction.guild_id)
 
         # Initialize embed
         leaderboard = discord.Embed(title=f"{guild.name} Leaderboard", description="")
@@ -77,59 +80,56 @@ class Scores(commands.Cog):
             if place > 15:
                 break
 
-        await ctx.send(embed=leaderboard)
+        await interaction.response.send_message(embed=leaderboard)
 
-    @cog_ext.cog_slash(
+    @app_commands.command(
         name="total",
         description="Check the total amount of points of members in this server.",
-        **loaded_guilds,
     )
-    async def total(self, ctx: SlashContext):
+    @app_commands.guilds(*configured_guilds)
+    async def total(self, interaction: discord.Interaction):
         guild_total = 0
 
         # Sum up all scores within the server
         async with aiosqlite.connect("databases/scores.db") as scores:
             async with scores.execute(
-                f"SELECT cumulative FROM guild_{ctx.guild_id}"
+                f"SELECT cumulative FROM guild_{interaction.guild_id}"
             ) as guild_scores:
                 async for (score,) in guild_scores:
                     guild_total += score
 
-        await ctx.send(f"Total points for this server: **{guild_total}**")
+        await interaction.response.send_message(
+            f"Total points for this server: **{guild_total}**"
+        )
 
-    @cog_ext.cog_slash(
+    @app_commands.command(
         name="rank",
         description="Display a user's rank & score in this server.",
-        options=[
-            create_option(
-                name="user",
-                description="The user to display the rank of (default you).",
-                option_type=OptionType.USER,
-                required=False,
-            ),
-        ],
-        **loaded_guilds,
     )
-    async def rank(self, ctx: SlashContext, user=None):
+    @app_commands.describe(user="The user to display the rank of (default you).")
+    @app_commands.guilds(*configured_guilds)
+    async def rank(self, interaction: discord.Interaction, user: discord.Member = None):
         if user is None:
-            user = ctx.author
+            user = interaction.user
 
         # TODO: Implement caching of guild leaderboards
         # Get guild & user's score(s) for standings comparison
         async with aiosqlite.connect("databases/scores.db") as scores:
             guild_standings = await scores.execute_fetchall(
-                f"SELECT DISTINCT cumulative FROM guild_{ctx.guild_id} ORDER BY cumulative DESC"
+                f"SELECT DISTINCT cumulative FROM guild_{interaction.guild_id} ORDER BY cumulative DESC"
             )
 
             user_request = await scores.execute(
-                f"SELECT cumulative FROM guild_{ctx.guild_id} WHERE user = ?",
+                f"SELECT cumulative FROM guild_{interaction.guild_id} WHERE user = ?",
                 (user.id,),
             )
             user_row = await user_request.fetchone()
 
         # Row doesn't exist -> user hasn't gotten any points yet
         if user_row is None:
-            return await ctx.send("That user doesn't have any points yet!")
+            return await interaction.response.send_message(
+                "That user doesn't have any points yet!"
+            )
 
         # Rank by correct score
         user_score = user_row[0]
@@ -141,40 +141,27 @@ class Scores(commands.Cog):
             )
         )[0]
 
-        await ctx.send(
+        await interaction.response.send_message(
             f"{user.name} is in **{self.make_ordinal(user_rank)} place** with **{user_score}** points."
         )
 
-    @cog_ext.cog_subcommand(
-        base="score",
+    @score_group.command(
         name="set",
         description="Set a user's score to a specific value.",
-        options=[
-            create_option(
-                name="user",
-                description="The user whose score to set.",
-                option_type=OptionType.USER,
-                required=True,
-            ),
-            create_option(
-                name="points",
-                description="The user's new score.",
-                option_type=OptionType.INTEGER,
-                required=True,
-            ),
-        ],
-        **loaded_guilds,
-        **admin_perms,
     )
-    async def score_set(self, ctx: SlashContext, user, points):
+    async def score_set(
+        self, interaction: discord.Interaction, user: discord.Member, points: int
+    ):
         # Bots are ignored for score purposes
         if user.bot:
-            return await ctx.send(f"{user.name} is a bot and cannot get points.")
+            return await interaction.response.send(
+                f"{user.name} is a bot and cannot get points.", ephemeral=True
+            )
 
         # Update user's score in guild database table
         async with aiosqlite.connect("databases/scores.db") as scores:
             await scores.execute(
-                f"INSERT INTO guild_{ctx.guild_id}(user, cumulative) VALUES(?, ?) "
+                f"INSERT INTO guild_{interaction.guild_id}(user, cumulative) VALUES(?, ?) "
                 f"ON CONFLICT(user) DO UPDATE SET cumulative = ?",
                 (user.id, points, points),
             )
@@ -184,60 +171,43 @@ class Scores(commands.Cog):
         if (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(user.guild)
 
-        await ctx.send(f"Successfully updated {user.name}'s score to **{points}**!")
-        self.logger.info(f"Successfully updated {user.name}'s score to {points}")
+        await interaction.response.send(
+            f"Successfully updated {user.name}'s score to **{points}**!"
+        )
+        self.logger.debug(f"Successfully updated {user.name}'s score to {points}")
 
-    @cog_ext.cog_subcommand(
-        base="score",
-        name="adjust",
-        description="Give points to or take points away from a user.",
-        options=[
-            create_option(
-                name="user",
-                description="The user whose score to change.",
-                option_type=OptionType.USER,
-                required=True,
-            ),
-            create_option(
-                name="points",
-                description="The number of points to give or take away.",
-                option_type=OptionType.INTEGER,
-                required=True,
-            ),
-            create_option(
-                name="mode",
-                description="Whether to give or take points (default give).",
-                option_type=OptionType.STRING,
-                required=False,
-                choices=[
-                    create_choice(value="increment", name="Give user points"),
-                    create_choice(value="decrement", name="Take points away from user"),
-                ],
-            ),
-        ],
-        **loaded_guilds,
-        **admin_perms,
+    @score_group.command(
+        name="adjust", description="Give points to or take points away from a user."
     )
-    async def score_adjust(self, ctx: SlashContext, user, points, mode="increment"):
+    @app_commands.describe(
+        user="Member to adjust score of", points="Amount of points to give/take away"
+    )
+    @app_commands.check(admin_check)
+    async def score_adjust(
+        self, interaction: discord.Interaction, user: discord.Member, points: int
+    ):
         # Bots are ignored for score purposes
         if user.bot:
-            return await ctx.send(f"{user.name} is a bot and cannot get points.")
-
-        # Negate change if decrementing
-        if mode == "decrement":
-            points = -points
+            return await interaction.response.send_message(
+                f"{user.name} is a bot and cannot get points."
+            )
 
         # Update scores in database
         await self.update_scores(user, points)
 
-        if mode == "increment":
-            await ctx.send(f"Gave {user.name} {points} points!")
+        # Incrementing user score
+        if points >= 0:
+            await interaction.response.send_message(
+                f"Gave {user.name} {points} points!"
+            )
 
-        # (mode == "decrement")
+        # Decrementing user score
         else:
-            await ctx.send(f"Took {-points} points from {user.name}!")
+            await interaction.response.send_message(
+                f"Took {-points} points from {user.name}!"
+            )
 
-        self.logger.info(f"Changed {user.name}'s cumulative score by {points} points.")
+        self.logger.debug(f"Changed {user.name}'s score by {points} points.")
 
     # TODO: add a reason parameter for logging purposes
     async def update_scores(self, member, points, update_roles=True):
@@ -262,7 +232,7 @@ class Scores(commands.Cog):
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(member.guild)
 
-        self.logger.info(
+        self.logger.debug(
             f"Updated {member.name}'s cumulative score to {new_cumulative}"
         )
 
@@ -284,5 +254,5 @@ class Scores(commands.Cog):
         return str(n) + suffix
 
 
-def setup(bot):
-    bot.add_cog(Scores(bot))
+async def setup(bot):
+    await bot.add_cog(Scores(bot))

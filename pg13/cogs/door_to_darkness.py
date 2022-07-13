@@ -56,12 +56,12 @@ class DoorToDarkness(commands.Cog):
 
         # Users have to mention a specific user
         if mention_member not in message.mentions:
-            self.logger.info(f"User {message.author.id} didn't mention correct user")
+            self.logger.debug(f"User {message.author.id} didn't mention correct user")
             return
 
         # Make sure that "door to darkness" is also included in the message
         if re.search(self.door_regex, message.content) is None:
-            self.logger.info(
+            self.logger.debug(
                 f"User {message.author.id} didn't mention the door to darkness"
             )
             return
@@ -75,7 +75,7 @@ class DoorToDarkness(commands.Cog):
             user_id = await user_request.fetchone()
 
             if user_id is not None:
-                self.logger.info(
+                self.logger.debug(
                     f"User {message.author.id} already claimed door to darkness point"
                 )
                 return
@@ -83,7 +83,9 @@ class DoorToDarkness(commands.Cog):
         # Assuming all of the above conditions are met, give the message author one point
         if (scores := self.bot.get_cog("Scores")) is not None:
             await scores.update_scores(message.author, 1)
-            self.logger.info(f"User {message.author.id} claimed door to darkness point")
+            self.logger.debug(
+                f"User {message.author.id} claimed door to darkness point"
+            )
 
         # Update the claim database so each user only gets one point from this a day
         async with aiosqlite.connect("databases/dailies.db") as dailies:
@@ -114,10 +116,10 @@ class DoorToDarkness(commands.Cog):
         if now.hour >= hour and now.minute >= minute:
             future += datetime.timedelta(days=1)
 
-        self.logger.info("Delaying door to darkness claim clear until proper time")
+        self.logger.debug("Delaying door to darkness claim clear until proper time")
         await asyncio.sleep((future - now).seconds)
-        self.logger.info("Finished delaying door to darkness claim clear")
+        self.logger.debug("Finished delaying door to darkness claim clear")
 
 
-def setup(bot):
-    bot.add_cog(DoorToDarkness(bot))
+async def setup(bot):
+    await bot.add_cog(DoorToDarkness(bot))
