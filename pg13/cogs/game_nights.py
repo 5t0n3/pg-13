@@ -206,7 +206,8 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
     async def gamenight_host(self, interaction: discord.Interaction):
         if (voice_state := interaction.user.voice) is None:
             return await interaction.response.send_message(
-                "You need to be in a voice channel to start a game night!"
+                "You need to be in a voice channel to start a game night!",
+                ephemeral=True,
             )
 
         # TODO: Ensure one user doesn't host multiple game nights at once

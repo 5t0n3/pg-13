@@ -157,7 +157,8 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
             # If the daily doesn't exist, the above query returns None
             if channel_exists is None:
                 return await interaction.response.send_message(
-                    f"{channel.mention} doesn't have a daily bonus attached to it!"
+                    f"{channel.mention} doesn't have a daily bonus attached to it!",
+                    ephemeral=True,
                 )
 
             # Delete channel's claim table & entry in guild table
