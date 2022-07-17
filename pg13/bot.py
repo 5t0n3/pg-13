@@ -66,6 +66,16 @@ class PG13Bot(commands.Bot):
                 "Hey, you don't have permission to do that :)", ephemeral=True
             )
 
+        else:
+            await interaction.response.send_message(
+                "Oops! Something went wrong while executing that command.",
+                ephemeral=True,
+            )
+            self.logger.error(
+                f"Error while executing command `/{interaction.command.qualified_name}`:",
+                exc_info=error,
+            )
+
     async def update_presence(self):
         bot_presence = discord.Activity(
             name="your every mov(i)e :)", type=discord.ActivityType.watching
