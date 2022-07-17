@@ -13,15 +13,14 @@ class Scores(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.logger = logging.getLogger("pg13.scores")
-        self.init_db_table()
 
-    def init_db_table(self):
-        db = sqlite3.connect("pg-13.db")
-        db.execute(
-            "CREATE TABLE IF NOT EXISTS scores"
-            "(guild INT, user INT, score INT, UNIQUE(guild, user))"
-        )
-        db.close()
+    async def init_db(self):
+        async with aiosqlite.connect("pg-13.db") as db:
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS scores"
+                "(guild INT, user INT, score INT, UNIQUE(guild, user))"
+            )
+            await db.commit()
 
     score_group = app_commands.Group(
         name="score",
@@ -234,4 +233,6 @@ class Scores(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(Scores(bot))
+    cog = Scores(bot)
+    await cog.init_db()
+    await bot.add_cog(cog)
