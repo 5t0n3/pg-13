@@ -64,7 +64,7 @@ class BonusRoles(commands.Cog):
                 # Give user 5-point bonus if they didn't have the role before
                 # See below comment about checking if the cog is None
                 scores_cog = self.bot.get_cog("Scores")
-                await scores_cog.update_scores(member, 5, update_roles=False)
+                await scores_cog.increment_score(member, 5, update_roles=False)
 
         # Swap 2 users' bonus roles, if applicable
         elif last_id not in top_user_set:
@@ -81,7 +81,7 @@ class BonusRoles(commands.Cog):
                 # Scores cog is a prerequisite; if this errors you have bigger
                 # problems than a cog being None
                 scores_cog = self.bot.get_cog("Scores")
-                await scores_cog.update_scores(new_last, 5, update_roles=False)
+                await scores_cog.increment_score(new_last, 5, update_roles=False)
 
                 # Update last place member ID for guild
                 self.last_places[guild.id] = new_last.id
