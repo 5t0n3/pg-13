@@ -1,6 +1,9 @@
 import logging
 
+import discord
 from discord.ext import commands
+
+from .cog_config import configured_guilds
 
 
 async def is_me(ctx: commands.Context):
@@ -14,7 +17,9 @@ class Sync(commands.Cog):
     @commands.command(name="sync", description="Sync all slash commands")
     @commands.check(is_me)
     async def sync(self, ctx: commands.Context):
-        await ctx.bot.tree.sync()
+        # TODO: Sync global commands instead
+        for guild in configured_guilds:
+            await ctx.bot.tree.sync(guild=discord.Object(guild))
         await ctx.message.add_reaction("🔄")
         self.logger.info("Successfully synced all application commands!")
 
@@ -22,6 +27,8 @@ class Sync(commands.Cog):
     async def sync_error(self, ctx: commands.Context, error):
         if isinstance(error, commands.CheckFailure):
             await ctx.message.add_reaction("👎")
+        else:
+            self.logger.error("Error syncing commands:", exc_info=error)
 
 
 async def setup(bot):
