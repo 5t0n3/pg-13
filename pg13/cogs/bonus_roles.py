@@ -34,10 +34,9 @@ class BonusRoles(commands.Cog):
             return
 
         # Fetch top users from guild
-        async with aiosqlite.connect("databases/scores.db") as scores:
+        async with aiosqlite.connect("pg-13.db") as scores:
             top_rows = await scores.execute_fetchall(
-                f"SELECT user FROM guild_{guild.id} "
-                "ORDER BY cumulative DESC LIMIT 12"
+                "SELECT user FROM scores ORDER BY score DESC LIMIT 12"
             )
 
         # Convert list of rows (tuples) to list of user ids
