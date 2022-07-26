@@ -51,11 +51,11 @@ class BonusRoles(commands.Cog):
         lost_role = current_bonus_users - top_users
 
         for id in gained_role:
-            if (member := guild.get_member(user_id)) is not None:
+            if (member := guild.get_member(id)) is not None:
                 await member.add_roles(bonus_role, reason="Gained bonus role")
 
         for id in lost_role:
-            if (member := guild.get_member(user_id)) is not None:
+            if (member := guild.get_member(id)) is not None:
                 await member.remove_roles(bonus_role, reason="Lost bonus role")
 
         if (scores_cog := self.bot.get_cog("Scores")) is not None:
