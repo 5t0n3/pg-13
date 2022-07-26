@@ -9,7 +9,7 @@ from .cog_config import configured_guilds, admin_check
 logger = logging.getLogger(__name__)
 
 
-def make_ordinal(self, n):
+def make_ordinal(n):
     """
     Convert an integer into its ordinal representation::
 
