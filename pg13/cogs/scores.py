@@ -129,7 +129,7 @@ class Scores(commands.Cog):
             )
 
         place = len(scores_above)
-        user_score = scores_above[-1]
+        user_score = scores_above[-1]["score"]
         await interaction.response.send_message(
             f"{user.name} is in **{make_ordinal(place)} place** with **{user_score}** points."
         )
