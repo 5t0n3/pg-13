@@ -212,7 +212,7 @@ class Scores(commands.Cog):
         async with self.db_pool.acquire() as con:
             await con.executemany(
                 "INSERT INTO scores VALUES($1, $2, $3) ON CONFLICT(guild, userid) "
-                "DO UPDATE SET score = score + $3",
+                "DO UPDATE SET score = scores.score + $3",
                 [(guild.id, *increment) for increment in increments],
             )
 
