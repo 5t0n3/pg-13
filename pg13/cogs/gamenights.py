@@ -74,7 +74,7 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
                 "CREATE TABLE IF NOT EXISTS voice_logs"
                 "(channel INT, guild INT, userid INT, "
                 "duration INTERVAL, join_time TIMESTAMP WITH TIME ZONE, "
-                "UNIQUE(channel, user))"
+                "UNIQUE(channel, userid))"
             )
 
     @commands.Cog.listener()
@@ -97,7 +97,7 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
             if after.channel is not None:
                 await db.execute(
                     "INSERT INTO voice_logs VALUES($1, $2, $3, 0, CURRENT_TIMESTAMP) "
-                    "ON CONFLICT(channel, user) DO UPDATE SET join_time = CURRENT_TIMESTAMP",
+                    "ON CONFLICT(channel, userid) DO UPDATE SET join_time = CURRENT_TIMESTAMP",
                     after.channel.id,
                     after.channel.guild.id,
                     member.id,
