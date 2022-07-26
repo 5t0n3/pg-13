@@ -105,7 +105,7 @@
                 }];
 
                 settings = {
-                  listen_addresses = lib.mkForce "";
+                  # listen_addresses = lib.mkForce "";
                   unix_socket_directories = "/tmp";
                   unix_socket_permissions = "0770";
                 };
