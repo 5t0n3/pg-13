@@ -154,7 +154,7 @@ class Scores(commands.Cog):
         async with self.db_pool.acquire() as con:
             await con.execute(
                 f"INSERT INTO scores VALUES($1, $2, $3) "
-                f"ON CONFLICT(guild, userid) DO UPDATE SET score = $3",
+                f"ON CONFLICT(guild, userid) DO UPDATE SET score = EXCLUDED.score",
                 interaction.guild_id,
                 user.id,
                 points,

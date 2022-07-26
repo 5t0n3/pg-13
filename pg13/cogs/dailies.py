@@ -150,12 +150,11 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
         provided_attachment = bool(message.attachments or message.embeds)
 
         async with self.db_pool.acquire() as con:
-            # TODO: Check if this is actually valid sql lol
             bonus_points = await con.fetchval(
                 "WITH bonus_info AS (SELECT points, attachment FROM channel_bonuses WHERE channel = $1 AND guild = $2), "
                 "claim_row AS (SELECT $1, $2, $3 FROM bonus_info WHERE attachment IN ($4, FALSE))"
                 "INSERT INTO channel_claims (SELECT * FROM claim_row) "
-                "ON CONFLICT(channel, guild) DO NOTHING"
+                "ON CONFLICT(channel, guild) DO NOTHING "
                 "RETURNING (SELECT points FROM bonus_info)",
                 message.channel.id,
                 message.guild.id,

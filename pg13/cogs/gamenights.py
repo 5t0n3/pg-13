@@ -97,7 +97,7 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
             if after.channel is not None:
                 await db.execute(
                     "INSERT INTO voice_logs VALUES($1, $2, $3, 0, CURRENT_TIMESTAMP) "
-                    "ON CONFLICT(channel, userid) DO UPDATE SET join_time = CURRENT_TIMESTAMP",
+                    "ON CONFLICT(channel, userid) DO UPDATE SET join_time = EXCLUDED.join_time",
                     after.channel.id,
                     after.channel.guild.id,
                     member.id,
