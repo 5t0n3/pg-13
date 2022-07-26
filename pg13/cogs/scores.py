@@ -113,14 +113,11 @@ class Scores(commands.Cog):
                 "Bots can't get points silly :)", ephemeral=True
             )
 
-        place = 1
-
         async with self.db_pool.acquire() as con:
-            # Fetch the scores that are greater than or equal to the user's score
             scores_above = await con.fetch(
                 "WITH guild_scores AS (SELECT score FROM scores WHERE guild = $1), "
-                "user_score as (SELECT score FROM guild_scores WHERE user = $2)"
-                "SELECT score FROM guild_scores WHERE score >= user_score "
+                "user_score as (SELECT score FROM guild_scores WHERE userid = $2) "
+                "SELECT guild_scores.score FROM guild_scores, user_score WHERE guild_scores.score >= user_score.score "
                 "ORDER BY score DESC",
                 interaction.guild_id,
                 user.id,
