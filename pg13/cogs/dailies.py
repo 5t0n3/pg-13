@@ -1,45 +1,44 @@
 import asyncio
 import datetime
 import logging
+from zoneinfo import ZoneInfo
 
-import aiosqlite
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 from .cog_config import configured_guilds, admin_check
 
+logger = logging.getLogger(__name__)
+
 
 @app_commands.guilds(*configured_guilds)
 class DailyBonuses(commands.GroupCog, group_name="daily"):
     def __init__(self, bot):
         self.bot = bot
-        self.logger = logging.getLogger("pg13.dailies")
+        self.db_pool = bot.db_pool
 
         self.clear_daily_claims.start()
 
-    async def init_db(self):
-        async with aiosqlite.connect("pg-13.db") as db:
-            # TODO: Should these have unique constraints?
+    async def cog_load(self):
+        async with self.db_pool.acquire() as con:
             # Channel bonuses
-            await db.execute(
+            await con.execute(
                 "CREATE TABLE IF NOT EXISTS channel_bonuses"
                 "(channel INT, guild INT, points INT, attachment BOOLEAN, UNIQUE(channel, guild))"
             )
 
             # Channel bonus claims
-            await db.execute(
+            await con.execute(
                 "CREATE TABLE IF NOT EXISTS channel_claims"
-                "(channel INT, guild INT, user INT, UNIQUE(channel, user))"
+                "(channel INT, guild INT, userid INT, UNIQUE(channel, userid))"
             )
 
             # `/daily claim` uses
-            await db.execute(
+            await con.execute(
                 "CREATE TABLE IF NOT EXISTS daily_claims"
-                "(guild INT, user INT, UNIQUE(guild, user))"
+                "(guild INT, userid INT, UNIQUE(guild, userid))"
             )
-
-            await db.commit()
 
     # DAILY BONUS COMMAND
     @app_commands.command(
@@ -47,40 +46,30 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
         description="Claim a daily reward of some points.",
     )
     async def daily_claim(self, interaction: discord.Interaction):
-        async with aiosqlite.connect("pg-13.db") as db:
-            # Check if user has already claimed today's bonus
-            async with db.execute(
-                f"SELECT * FROM daily_claims WHERE user = ? AND guild = ?",
-                (interaction.user.id, interaction.guild_id),
-            ) as user_request:
-                user_claimed = await user_request.fetchone()
+        async with self.db_pool.acquire() as con:
+            claim_result = await con.execute(
+                "INSERT INTO daily_claims VALUES($1, $2) ON CONFLICT(guild, userid) DO NOTHING",
+                interaction.guild_id,
+                interaction.user.id,
+            )
 
-            if user_claimed is not None:
-                self.logger.debug(
-                    f"User {interaction.user.name} already claimed bonus today"
-                )
-                return await interaction.response.send_message(
-                    "You've already claimed today's daily reward :)", ephemeral=True
-                )
+        rows_updated = claim_result.split(" ")[-1]
+        if rows_updated == 0:
+            logger.debug(f"User {interaction.user.name} already claimed bonus today")
+            await interaction.response.send_message(
+                "You've already claimed today's daily reward :)", ephemeral=True
+            )
 
+        else:
             # Give user points if they haven't claimed it
             if (scores_cog := self.bot.get_cog("Scores")) is not None:
                 await scores_cog.increment_score(interaction.user, 3)
 
-            # Update daily claim table for guild
-            await db.execute(
-                "INSERT INTO daily_claims VALUES(?, ?)",
-                (
-                    interaction.guild_id,
-                    interaction.user.id,
-                ),
+            await interaction.response.send_message(
+                "Succesfully claimed your daily bonus!"
             )
-            await db.commit()
-
-        await interaction.response.send_message("Succesfully claimed your daily bonus!")
 
     # CHANNEL DAILY BONUSES
-    # FIXME: points argument seems to be broken
     @app_commands.command(
         name="attach",
         description="Attach a daily point bonus to messages in a channel.",
@@ -98,30 +87,25 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
         points: int = 1,
         attachment: bool = False,
     ):
-        async with aiosqlite.connect("pg-13.db") as db:
-            # Ensure channel doesn't already have a daily bonus
-            async with db.execute(
-                f"SELECT * FROM channel_bonuses WHERE channel = ? AND guild = ?",
-                (channel.id, interaction.guild_id),
-            ) as exists_request:
-                entry_exists = await exists_request.fetchone()
+        async with self.db_pool.acquire() as con:
+            bonus_result = await con.execute(
+                "INSERT INTO channel_bonuses VALUES($1, $2, $3, $4) ON CONFLICT(channel, guild) DO NOTHING",
+                channel.id,
+                channel.guild.id,
+                points,
+                attachment,
+            )
 
-            if entry_exists is not None:
-                return await interaction.response.send_message(
-                    f"#{channel} already has a daily point reward!", ephemeral=True
-                )
-
-            else:
-                await db.execute(
-                    f"INSERT INTO channel_bonuses VALUES (?, ?, ?, ?)",
-                    (channel.id, interaction.guild_id, points, attachment),
-                )
-                await db.commit()
-
-        await interaction.response.send_message(
-            f"Successfully added {points}-point daily bonus to {channel.mention}!",
-            ephemeral=True,
-        )
+        rows_updated = bonus_result.split(" ")[-1]
+        if rows_updated == 0:
+            await interaction.response.send_message(
+                f"{channel.mention} already has a daily point reward!", ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                f"Successfully added {points}-point daily bonus to {channel.mention}!",
+                ephemeral=True,
+            )
 
     @app_commands.command(
         name="remove", description="Remove a daily message bonus from a text channel."
@@ -131,125 +115,71 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
     async def daily_remove(
         self, interaction: discord.Interaction, channel: discord.TextChannel
     ):
-        async with aiosqlite.connect("pg-13.db") as db:
-            async with db.execute(
-                "SELECT channel FROM channel_bonuses "
-                "WHERE channel = ? AND guild = ?",
-                (channel.id, interaction.guild_id),
-            ) as channel_request:
-                channel_exists = await channel_request.fetchone()
-
-            if channel_exists is None:
-                return await interaction.response.send_message(
-                    f"{channel.mention} doesn't have a daily bonus attached to it!",
-                    ephemeral=True,
-                )
-
-            # Remove bonus & claim entries from corresponding tables
-            await db.execute(
-                f"DELETE FROM channel_bonuses WHERE channel = ? AND guild = ?",
-                (channel.id, interaction.guild_id),
+        async with self.db_pool.acquire() as con:
+            delete_result = await con.execute(
+                f"DELETE FROM channel_bonuses WHERE channel = $1 AND guild = $2",
+                channel.id,
+                interaction.guild_id,
             )
-            await db.execute(
-                f"DELETE FROM channel_claims WHERE channel = ? AND guild = ?",
-                (channel.id, interaction.guild_id),
+            await con.execute(
+                f"DELETE FROM channel_claims WHERE channel = $1 AND guild = $2",
+                channel.id,
+                interaction.guild_id,
             )
-            await db.commit()
 
-        await interaction.response.send_message(
-            f"Succesfully detached daily bonus from channel {channel.mention}!",
-            ephemeral=True,
-        )
-        self.logger.debug(
-            f"Succesfully detached daily bonus from channel #{channel.name}"
-        )
+        deleted_bonuses = delete_result.split(" ")[-1]
+        if deleted_bonuses == 0:
+            await interaction.response.send_message(
+                f"{channel.mention} doesn't have a daily bonus attached to it!",
+                ephemeral=True,
+            )
+        else:
+            await interaction.response.send_message(
+                f"Succesfully detached daily bonus from channel {channel.mention}!",
+                ephemeral=True,
+            )
+            logger.debug(
+                f"Succesfully detached daily bonus from channel #{channel.name}"
+            )
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if not message.author.bot:
-            # Give user daily bonus if applicable
-            async with aiosqlite.connect("pg-13.db") as db:
-                db.row_factory = aiosqlite.Row
+        if message.author.bot:
+            return
 
-                # Check if message's channel has a daily bonus
-                async with db.execute(
-                    f"SELECT points, attachment FROM channel_bonuses "
-                    "WHERE channel = ? AND guild = ?",
-                    (message.channel.id, message.guild.id),
-                ) as channel_request:
-                    channel_bonus = await channel_request.fetchone()
+        provided_attachment = bool(message.attachments or message.embeds)
 
-                if channel_bonus is not None:
-                    # Necessary message attachment wasn't provided
-                    if channel_bonus["attachment"] and not (
-                        message.attachments or message.embeds
-                    ):
-                        self.logger.debug(
-                            f"User {message.author.name} didn't provide necessary attachment/embeds for bonus in #{channel.name}"
-                        )
+        async with self.db_pool.acquire() as con:
+            # TODO: Check if this is actually valid sql lol
+            bonus_points = await con.fetchval(
+                "WITH bonus_info AS (SELECT points, attachment FROM channel_bonuses WHERE channel = $1 AND guild = $2), "
+                "claim_row AS (SELECT $1, $2, $3 FROM bonus_info WHERE attachment IN ($4, FALSE))"
+                "INSERT INTO channel_claims (SELECT * FROM claim_row) "
+                "ON CONFLICT(channel, guild) DO NOTHING"
+                "RETURNING (SELECT points FROM bonus_info)",
+                message.channel.id,
+                message.guild.id,
+                message.author.id,
+                provided_attachment,
+            )
 
-                    else:
-                        async with db.execute(
-                            f"SELECT * FROM channel_claims"
-                            " WHERE user = ? AND channel = ? AND guild = ?",
-                            (message.author.id, message.channel.id, message.guild.id),
-                        ) as claim_request:
-                            claimed_today = await claim_request.fetchone()
+        if (
+            bonus_points is not None
+            and (scores_cog := self.bot.get_cog("Scores")) is not None
+        ):
+            await scores_cog.increment_score(message.author, bonus_points)
+            logger.debug(
+                f"User {message.author.name} claimed a daily in #{message.channel.name}"
+            )
 
-                        # Bonus not claimed and attachment(s) supplied if necessary
-                        if claimed_today is None:
-                            score_cog = self.bot.get_cog("Scores")
-                            if score_cog is not None:
-                                await score_cog.increment_score(
-                                    message.author, channel_bonus["points"]
-                                )
-
-                            # Updated daily claimed table
-                            await db.execute(
-                                f"INSERT INTO channel_claims VALUES(?, ?, ?)",
-                                (
-                                    message.channel.id,
-                                    message.guild.id,
-                                    message.author.id,
-                                ),
-                            )
-                            await db.commit()
-
-                            self.logger.debug(
-                                f"User {message.author.name} claimed a daily in #{message.channel.name}"
-                            )
-
-                        else:
-                            self.logger.debug(
-                                f"User {message.author.name} tried to claim daily in #{message.channel.name} again"
-                            )
-
-            # await self.bot.process_commands(message)
-
-    @tasks.loop(hours=24)
+    @tasks.loop(time=datetime.time(23, 58, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def clear_daily_claims(self):
-        async with aiosqlite.connect("pg-13.db") as db:
-            await db.execute("DELETE FROM channel_claims")
-            await db.execute("DELETE FROM daily_claims")
-            await db.commit()
+        async with self.db_pool.acquire() as con:
+            await con.execute("DELETE FROM channel_claims")
+            await con.execute("DELETE FROM daily_claims")
 
-        self.logger.info("Cleared all daily reward tables")
-
-    @clear_daily_claims.before_loop
-    async def ensure_clear_time(self):
-        hour, minute = 23, 58
-        await self.bot.wait_until_ready()
-
-        now = datetime.datetime.now()
-        future = datetime.datetime(now.year, now.month, now.day, hour, minute)
-        if now.hour >= hour and now.minute >= minute:
-            future += datetime.timedelta(days=1)
-
-        self.logger.debug("Delaying claim clear until proper time")
-        await asyncio.sleep((future - now).seconds)
+        logger.debug("Cleared all daily reward tables")
 
 
 async def setup(bot):
-    cog = DailyBonuses(bot)
-    await cog.init_db()
-    await bot.add_cog(cog)
+    await bot.add_cog(DailyBonuses(bot))

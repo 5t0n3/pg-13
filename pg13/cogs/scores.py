@@ -1,26 +1,43 @@
 import logging
-import sqlite3
 
-import aiosqlite
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from .cog_config import configured_guilds, admin_check
 
+logger = logging.getLogger(__name__)
+
+
+def make_ordinal(self, n):
+    """
+    Convert an integer into its ordinal representation::
+
+        make_ordinal(0)   => '0th'
+        make_ordinal(3)   => '3rd'
+        make_ordinal(122) => '122nd'
+        make_ordinal(213) => '213th'
+
+    (taken from https://stackoverflow.com/a/50992575)
+    """
+    n = int(n)
+    suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
+    if 11 <= (n % 100) <= 13:
+        suffix = "th"
+    return str(n) + suffix
+
 
 class Scores(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.logger = logging.getLogger("pg13.scores")
+        self.db_pool = bot.db_pool
 
-    async def init_db(self):
-        async with aiosqlite.connect("pg-13.db") as db:
-            await db.execute(
+    async def cog_load(self):
+        async with self.db_pool.acquire() as con:
+            await con.execute(
                 "CREATE TABLE IF NOT EXISTS scores"
-                "(guild INT, user INT, score INT, UNIQUE(guild, user))"
+                "(guild INT, userid INT, score INT, UNIQUE(guild, userid))"
             )
-            await db.commit()
 
     score_group = app_commands.Group(
         name="score",
@@ -37,26 +54,24 @@ class Scores(commands.Cog):
         leaderboard = discord.Embed(
             title=f"{interaction.guild.name} Leaderboard", description=""
         )
+
+        async with self.db_pool.acquire() as con:
+            descending_scores = await con.fetch(
+                "SELECT userid, score FROM SCORES WHERE guild = $1 ORDER BY score DESC",
+                interaction.guild_id,
+            )
+
         place = 1
-        previous_score = None
+        for row in descending_scores:
+            if (member := interaction.guild.get_member(row["userid"])) is not None:
+                leaderboard.description += (
+                    f"{place}: {member.mention} - {row['score']} points\n"
+                )
 
-        async with aiosqlite.connect("pg-13.db") as db:
-            db.row_factory = aiosqlite.Row
+                if place >= 15:
+                    break
 
-            async with db.execute("SELECT * FROM scores ORDER BY score DESC") as scores:
-                async for row in scores:
-                    if (
-                        member := interaction.guild.get_member(row["user"])
-                    ) is not None:
-                        leaderboard.description += (
-                            f"{place}: {member.mention} - {row['score']} points\n"
-                        )
-
-                        if place > 15:
-                            break
-
-                        place += 1
-                        previous_score = row["user"]
+                place += 1
 
         # TODO: Record the leaderboard message id for pagination purposes
 
@@ -68,20 +83,19 @@ class Scores(commands.Cog):
     )
     @app_commands.guilds(*configured_guilds)
     async def total(self, interaction: discord.Interaction):
-        guild_total = 0
+        async with self.db_pool.acquire() as con:
+            guild_total = await con.fetchval(
+                "SELECT sum(score) FROM scores WHERE guild = $1", interaction.guild_id
+            )
 
-        async with aiosqlite.connect("pg-13.db") as db:
-            db.row_factory = aiosqlite.Row
-
-            async with db.execute(
-                f"SELECT score FROM scores WHERE guild = {interaction.guild_id}"
-            ) as guild_scores:
-                async for row in guild_scores:
-                    guild_total += row["score"]
-
-        await interaction.response.send_message(
-            f"Total points for this server: **{guild_total}**"
-        )
+        if guild_total is None:
+            await interaction.response.send_message(
+                "No users have points in this server."
+            )
+        else:
+            await interaction.response.send_message(
+                f"Total points for this server: **{guild_total}**"
+            )
 
     # TODO: Remove after leaderboard pagination is implemented?
     @app_commands.command(
@@ -101,35 +115,26 @@ class Scores(commands.Cog):
 
         place = 1
 
-        async with aiosqlite.connect("pg-13.db") as db:
-            db.row_factory = aiosqlite.Row
+        async with self.db_pool.acquire() as con:
+            # Fetch the scores that are greater than or equal to the user's score
+            scores_above = await con.fetch(
+                "WITH guild_scores AS (SELECT score FROM scores WHERE guild = $1), "
+                "user_score as (SELECT score FROM guild_scores WHERE user = $2)"
+                "SELECT score FROM guild_scores WHERE score >= user_score "
+                "ORDER BY score DESC",
+                interaction.guild_id,
+                user.id,
+            )
 
-            async with db.execute(
-                "SELECT score FROM scores WHERE guild = ? AND user = ?",
-                (interaction.guild_id, user.id),
-            ) as user_request:
-                user_row = await user_request.fetchone()
+        if scores_above is None:
+            return await interaction.response.send_message(
+                "That user doesn't have any points yet.", ephemeral=True
+            )
 
-            if user_row is None:
-                return await interaction.response.send_message(
-                    "That user doesn't have any points yet!", ephemeral=True
-                )
-
-            user_score = user_row["score"]
-
-            # TODO: Should this be distinct?
-            async with db.execute(
-                "SELECT score FROM scores "
-                f"WHERE guild = {interaction.guild_id} ORDER BY score DESC"
-            ) as scores:
-                async for row in scores:
-                    if row["score"] == user_score:
-                        break
-
-                    place += 1
-
+        place = len(users_above)
+        user_score = scores_above[-1]
         await interaction.response.send_message(
-            f"{user.name} is in **{self.make_ordinal(place)} place** with **{user_score}** points."
+            f"{user.name} is in **{make_ordinal(place)} place** with **{user_score}** points."
         )
 
     @score_group.command(
@@ -146,16 +151,16 @@ class Scores(commands.Cog):
             )
 
         # Update user's score in guild database table
-        async with aiosqlite.connect("pg-13.db") as db:
-            await db.execute(
-                f"INSERT INTO scores VALUES(?, ?, ?) "
-                f"ON CONFLICT(guild, user) DO UPDATE SET score = ?",
-                (interaction.guild_id, user.id, points, points),
+        async with self.db_pool.acquire() as con:
+            await con.execute(
+                f"INSERT INTO scores VALUES($1, $2, $3) "
+                f"ON CONFLICT(guild, userid) DO UPDATE SET score = $3",
+                interaction.guild_id,
+                user.id,
+                points,
             )
 
-            await db.commit()
-
-        self.logger.debug(f"Updated {user.name}'s score to {points}")
+        logger.debug(f"Updated {user.name}'s score to {points}")
 
         # Update bonus roles, if applicable
         if (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
@@ -198,41 +203,24 @@ class Scores(commands.Cog):
                 f"Took {-points} points from {user.name}!"
             )
 
+    async def increment_score(self, member, points):
+        await self.bulk_increment_scores(member.guild, [(member.id, points)])
+
     # TODO: add a reason parameter for logging purposes
-    async def increment_score(self, member, points, update_roles=True):
+    async def bulk_increment_scores(self, guild, increments, update_roles=True):
         """Changes a user's score by some amount"""
-        async with aiosqlite.connect("pg-13.db") as db:
-            await db.execute(
-                "INSERT INTO scores VALUES(?, ?, ?) ON CONFLICT(guild, user) "
-                "DO UPDATE SET score = score + ?",
-                (member.guild.id, member.id, points, points),
+        async with self.db_pool.acquire() as con:
+            await con.executemany(
+                "INSERT INTO scores VALUES($1, $2, $3) ON CONFLICT(guild, userid) "
+                "DO UPDATE SET score = score + $3",
+                [(guild.id, *increment) for increment in increments],
             )
-            await db.commit()
 
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
-            await bonus_cog.update_bonus_roles(member.guild)
+            await bonus_cog.update_bonus_roles(guild)
 
-        self.logger.debug(f"Changed {member.name}'s score by {points} points.")
-
-    def make_ordinal(self, n):
-        """
-        Convert an integer into its ordinal representation::
-
-            make_ordinal(0)   => '0th'
-            make_ordinal(3)   => '3rd'
-            make_ordinal(122) => '122nd'
-            make_ordinal(213) => '213th'
-
-        (taken from https://stackoverflow.com/a/50992575)
-        """
-        n = int(n)
-        suffix = ["th", "st", "nd", "rd", "th"][min(n % 10, 4)]
-        if 11 <= (n % 100) <= 13:
-            suffix = "th"
-        return str(n) + suffix
+        logger.debug(f"Changed {member.name}'s score by {points} points.")
 
 
 async def setup(bot):
-    cog = Scores(bot)
-    await cog.init_db()
-    await bot.add_cog(cog)
+    await bot.add_cog(Scores(bot))
