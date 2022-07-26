@@ -154,7 +154,7 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
                 "WITH bonus_info AS (SELECT points, attachment FROM channel_bonuses WHERE channel = $1 AND guild = $2), "
                 "claim_row AS (SELECT $1::BIGINT, $2::BIGINT, $3::BIGINT FROM bonus_info WHERE attachment IN ($4, FALSE))"
                 "INSERT INTO channel_claims (SELECT * FROM claim_row) "
-                "ON CONFLICT(channel, guild) DO NOTHING "
+                "ON CONFLICT(channel, userid) DO NOTHING "
                 "RETURNING (SELECT points FROM bonus_info)",
                 message.channel.id,
                 message.guild.id,
