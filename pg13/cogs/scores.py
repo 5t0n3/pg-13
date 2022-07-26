@@ -205,6 +205,7 @@ class Scores(commands.Cog):
 
     async def increment_score(self, member, points):
         await self.bulk_increment_scores(member.guild, [(member.id, points)])
+        logger.debug(f"Changed {member.name}'s score by {points} points.")
 
     # TODO: add a reason parameter for logging purposes
     async def bulk_increment_scores(self, guild, increments, update_roles=True):
@@ -218,8 +219,6 @@ class Scores(commands.Cog):
 
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(guild)
-
-        logger.debug(f"Changed {member.name}'s score by {points} points.")
 
 
 async def setup(bot):
