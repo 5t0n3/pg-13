@@ -115,7 +115,7 @@ class Scores(commands.Cog):
 
         async with self.db_pool.acquire() as con:
             scores_above = await con.fetch(
-                "WITH guild_scores AS (SELECT score FROM scores WHERE guild = $1), "
+                "WITH guild_scores AS (SELECT score, userid FROM scores WHERE guild = $1), "
                 "user_score as (SELECT score FROM guild_scores WHERE userid = $2) "
                 "SELECT guild_scores.score FROM guild_scores, user_score WHERE guild_scores.score >= user_score.score "
                 "ORDER BY score DESC",
