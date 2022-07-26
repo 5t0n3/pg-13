@@ -23,19 +23,19 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
             # Channel bonuses
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS channel_bonuses"
-                "(channel INT, guild INT, points INT, attachment BOOLEAN, UNIQUE(channel, guild))"
+                "(channel BIGINT, guild BIGINT, points INT, attachment BOOLEAN, UNIQUE(channel, guild))"
             )
 
             # Channel bonus claims
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS channel_claims"
-                "(channel INT, guild INT, userid INT, UNIQUE(channel, userid))"
+                "(channel BIGINT, guild BIGINT, userid BIGINT, UNIQUE(channel, userid))"
             )
 
             # `/daily claim` uses
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS daily_claims"
-                "(guild INT, userid INT, UNIQUE(guild, userid))"
+                "(guild BIGINT, userid BIGINT, UNIQUE(guild, userid))"
             )
 
         self.clear_daily_claims.start()
@@ -152,7 +152,7 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
         async with self.db_pool.acquire() as con:
             bonus_points = await con.fetchval(
                 "WITH bonus_info AS (SELECT points, attachment FROM channel_bonuses WHERE channel = $1 AND guild = $2), "
-                "claim_row AS (SELECT $1::INT, $2::INT, $3::INT FROM bonus_info WHERE attachment IN ($4, FALSE))"
+                "claim_row AS (SELECT $1, $2, $3 FROM bonus_info WHERE attachment IN ($4, FALSE))"
                 "INSERT INTO channel_claims (SELECT * FROM claim_row) "
                 "ON CONFLICT(channel, guild) DO NOTHING "
                 "RETURNING (SELECT points FROM bonus_info)",

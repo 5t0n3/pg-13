@@ -63,14 +63,14 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
             # Ongoing gamenights
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS gamenights"
-                "(voice_channel INT UNIQUE, guild INT, host INT, "
-                "start_channel INT, UNIQUE(guild, host))"
+                "(voice_channel BIGINT UNIQUE, guild BIGINT, host BIGINT, "
+                "start_channel BIGINT, UNIQUE(guild, host))"
             )
 
             # Voice channel duration tracking
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS voice_logs"
-                "(channel INT, guild INT, userid INT, "
+                "(channel BIGINT, guild BIGINT, userid BIGINT, "
                 "duration INTERVAL, join_time TIMESTAMP WITH TIME ZONE, "
                 "UNIQUE(channel, userid))"
             )

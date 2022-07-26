@@ -36,7 +36,7 @@ class Scores(commands.Cog):
         async with self.db_pool.acquire() as con:
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS scores"
-                "(guild INT, userid INT, score INT, UNIQUE(guild, userid))"
+                "(guild BIGINT, userid BIGINT, score INT, UNIQUE(guild, userid))"
             )
 
     score_group = app_commands.Group(
