@@ -53,7 +53,7 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
                 interaction.user.id,
             )
 
-        rows_updated = claim_result.split(" ")[-1]
+        rows_updated = int(claim_result.split(" ")[-1])
         if rows_updated == 0:
             logger.debug(f"User {interaction.user.name} already claimed bonus today")
             await interaction.response.send_message(
@@ -96,7 +96,7 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
                 attachment,
             )
 
-        rows_updated = bonus_result.split(" ")[-1]
+        rows_updated = int(bonus_result.split(" ")[-1])
         if rows_updated == 0:
             await interaction.response.send_message(
                 f"{channel.mention} already has a daily point reward!", ephemeral=True
@@ -127,7 +127,7 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
                 interaction.guild_id,
             )
 
-        deleted_bonuses = delete_result.split(" ")[-1]
+        deleted_bonuses = int(delete_result.split(" ")[-1])
         if deleted_bonuses == 0:
             await interaction.response.send_message(
                 f"{channel.mention} doesn't have a daily bonus attached to it!",

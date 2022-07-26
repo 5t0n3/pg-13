@@ -68,7 +68,7 @@ class DoorToDarkness(commands.Cog):
                 message.guild.id,
             )
 
-        rows_updated = claim_result.split(" ")[-1]
+        rows_updated = int(claim_result.split(" ")[-1])
 
         if rows_updated != 0 and (scores := self.bot.get_cog("Scores")) is not None:
             await scores.increment_score(message.author, 1)

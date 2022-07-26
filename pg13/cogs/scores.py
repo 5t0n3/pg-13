@@ -128,7 +128,7 @@ class Scores(commands.Cog):
                 "That user doesn't have any points yet.", ephemeral=True
             )
 
-        place = len(users_above)
+        place = len(scores_above)
         user_score = scores_above[-1]
         await interaction.response.send_message(
             f"{user.name} is in **{make_ordinal(place)} place** with **{user_score}** points."
