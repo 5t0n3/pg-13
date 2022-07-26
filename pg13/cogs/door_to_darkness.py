@@ -25,7 +25,7 @@ class DoorToDarkness(commands.Cog):
     async def cog_load(self):
         async with self.db_pool.acquire() as con:
             await con.execute(
-                "CREATE TABLE IF NOT EXISTS door_claims (userid INT, guild INT, PRIMARY KEY (userid, guild)"
+                "CREATE TABLE IF NOT EXISTS door_claims (userid INT, guild INT, PRIMARY KEY (userid, guild))"
             )
 
         # TODO: start tasks in all cogs
