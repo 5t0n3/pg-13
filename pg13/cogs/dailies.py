@@ -152,7 +152,7 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
         async with self.db_pool.acquire() as con:
             bonus_points = await con.fetchval(
                 "WITH bonus_info AS (SELECT points, attachment FROM channel_bonuses WHERE channel = $1 AND guild = $2), "
-                "claim_row AS (SELECT $1, $2, $3 FROM bonus_info WHERE attachment IN ($4, FALSE))"
+                "claim_row AS (SELECT $1::INT, $2::INT, $3::INT FROM bonus_info WHERE attachment IN ($4, FALSE))"
                 "INSERT INTO channel_claims (SELECT * FROM claim_row) "
                 "ON CONFLICT(channel, guild) DO NOTHING "
                 "RETURNING (SELECT points FROM bonus_info)",
