@@ -28,8 +28,7 @@ class DoorToDarkness(commands.Cog):
                 "CREATE TABLE IF NOT EXISTS door_claims (userid INT, guild INT, PRIMARY KEY (userid, guild))"
             )
 
-        # TODO: start tasks in all cogs
-        await self.clear_door_claims.start()
+        self.clear_door_claims.start()
 
     @commands.Cog.listener()
     async def on_message(self, message):

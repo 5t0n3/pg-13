@@ -58,8 +58,6 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
         self.bot = bot
         self.db_pool = bot.db_pool
 
-        self.clear_voice_logs.start()
-
     async def cog_load(self):
         async with self.db_pool.acquire() as con:
             # Ongoing gamenights
@@ -76,6 +74,8 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
                 "duration INTERVAL, join_time TIMESTAMP WITH TIME ZONE, "
                 "UNIQUE(channel, userid))"
             )
+
+        self.clear_voice_logs.start()
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):

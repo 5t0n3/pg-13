@@ -18,8 +18,6 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
         self.bot = bot
         self.db_pool = bot.db_pool
 
-        self.clear_daily_claims.start()
-
     async def cog_load(self):
         async with self.db_pool.acquire() as con:
             # Channel bonuses
@@ -39,6 +37,8 @@ class DailyBonuses(commands.GroupCog, group_name="daily"):
                 "CREATE TABLE IF NOT EXISTS daily_claims"
                 "(guild INT, userid INT, UNIQUE(guild, userid))"
             )
+
+        self.clear_daily_claims.start()
 
     # DAILY BONUS COMMAND
     @app_commands.command(
