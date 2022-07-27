@@ -135,10 +135,12 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
             )
             return
 
+        host_id = gamenight_info[0]["host"]
+
         # outside db:
         #  enumerate users based on duration
         make_leaderboard = functools.partial(
-            leaderboard_entry, guild=channel.guild, host_id=gamenight_info["host"]
+            leaderboard_entry, guild=channel.guild, host_id=host_id
         )
 
         #  functools.reduce into embed description?
@@ -151,14 +153,16 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
             guild_increments = functools.partial(
                 gamenight_increments,
                 guild=channel.guild,
-                host_id=gamenight_info["host"],
+                host_id=host_id,
             )
             point_increments = filter(
                 lambda bonus: bonus is not None, map(guild_increments, participants)
             )
             await scores_cog.bulk_increment_scores(channel.guild, point_increments)
 
-        summary_channel = await channel.guild.get_channel(summary_channel_id)
+        summary_channel = await channel.guild.get_channel(
+            gamenight_info[0]["start_channel"]
+        )
         await summary_channel.send(
             embed=discord.Embed(
                 title=f"Game night summary - {channel.name}",
