@@ -34,7 +34,7 @@ class Utilities(commands.Cog):
             for table in score_tables:
                 guild_id = int(table["name"][6:])
                 guild_scores = await scores.execute_fetchall(
-                    "SELECT * FROM {table['name']}"
+                    f"SELECT * FROM {table['name']}"
                 )
                 migrated_scores = map(
                     lambda row: (guild_id, row["user"], row["cumulative"]), guild_scores
