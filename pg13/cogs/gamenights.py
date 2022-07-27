@@ -201,12 +201,10 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
             # Add host/voice channel to guild game night table
             await con.execute(
                 f"INSERT INTO gamenights VALUES($1, $2, $3, $4)",
-                (
-                    gamenight_channel.id,
-                    interaction.guild_id,
-                    host.id,
-                    interaction.channel_id,
-                ),
+                gamenight_channel.id,
+                interaction.guild_id,
+                host.id,
+                interaction.channel_id,
             )
 
         await interaction.response.send_message(
