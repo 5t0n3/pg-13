@@ -65,7 +65,7 @@ class Utilities(commands.Cog):
                         row["channel"],
                         guild_id,
                         row["bonus"],
-                        row["attachment"],
+                        bool(row["attachment"]),
                     ),
                     guild_bonuses,
                 )
