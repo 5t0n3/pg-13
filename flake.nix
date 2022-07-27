@@ -35,6 +35,7 @@
 
             buildInputs = with pythonPkgs; [ typing-extensions ];
             propagatedBuildInputs = with pythonPkgs; [
+              aiosqlite
               asyncpg
               systemd
               toml

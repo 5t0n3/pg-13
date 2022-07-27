@@ -6,8 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "pg13"
 version = "1.0.0"
 dependencies = [
-  "discord.py",
+  "aiosqlite",
   "asyncpg",
+  "discord.py",
   "toml"
 ]
 
