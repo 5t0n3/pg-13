@@ -72,7 +72,7 @@ class Utilities(commands.Cog):
                 channel_bonuses.extend(migrated_bonuses)
 
                 # channel -> guild associations
-                channel_guilds = {row[0]: row[1] for row in migrated_bonuses}
+                channel_guilds = {row[0]: row[1] for row in channel_bonuses}
 
                 # other claims
                 for table in filter(
