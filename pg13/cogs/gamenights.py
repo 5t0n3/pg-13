@@ -160,9 +160,7 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
             )
             await scores_cog.bulk_increment_scores(channel.guild, point_increments)
 
-        summary_channel = await channel.guild.get_channel(
-            gamenight_info[0]["start_channel"]
-        )
+        summary_channel = channel.guild.get_channel(gamenight_info[0]["start_channel"])
         await summary_channel.send(
             embed=discord.Embed(
                 title=f"Game night summary - {channel.name}",
