@@ -55,9 +55,9 @@ class Utilities(commands.Cog):
             for guild_table in filter(
                 lambda table: table["name"].startswith("guild_"), daily_tables
             ):
-                guild_id = int(table["name"][6:])
+                guild_id = int(guild_table["name"][6:])
                 guild_bonuses = await dailies.execute_fetchall(
-                    f"SELECT * FROM {table['name']}"
+                    f"SELECT * FROM {guild_table['name']}"
                 )
 
                 migrated_bonuses = map(
