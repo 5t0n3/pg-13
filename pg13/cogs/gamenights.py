@@ -145,7 +145,7 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
 
         #  functools.reduce into embed description?
         leaderboard = functools.reduce(
-            make_leaderboard, enumerate(participants, start=1)
+            make_leaderboard, enumerate(participants, start=1), ""
         )
 
         #  bulk update scores for users
