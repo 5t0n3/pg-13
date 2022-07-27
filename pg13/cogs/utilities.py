@@ -71,45 +71,44 @@ class Utilities(commands.Cog):
                 )
                 channel_bonuses.extend(migrated_bonuses)
 
-                # channel -> guild associations
-                channel_guilds = {row[0]: row[1] for row in channel_bonuses}
+            # channel -> guild associations
+            channel_guilds = {row[0]: row[1] for row in channel_bonuses}
 
-                # other claims
-                for table in filter(
-                    lambda table: not table["name"].startswith("guild_"), daily_tables
-                ):
-                    table_contents = await dailies.execute_fetchall(
-                        f"SELECT * FROM {table['name']}"
+            # other claims
+            for table in filter(
+                lambda table: not table["name"].startswith("guild_"), daily_tables
+            ):
+                table_contents = await dailies.execute_fetchall(
+                    f"SELECT * FROM {table['name']}"
+                )
+
+                # Channel bonus claims
+                if table["name"].startswith("channel_"):
+                    channel_id = int(table["name"][8:])
+                    new_claims = map(
+                        lambda row: (
+                            channel_id,
+                            channel_guilds[channel_id],
+                            row["user"],
+                        ),
+                        table_contents,
                     )
+                    channel_claims.extend(new_claims)
 
-                    # Channel bonus claims
-                    # TODO: Check if this actually works when they are present
-                    if table["name"].startswith("channel_"):
-                        channel_id = int(table["name"][8:])
-                        new_claims = map(
-                            lambda row: (
-                                channel_id,
-                                channel_guilds[channel_id],
-                                row["user"],
-                            ),
-                            table_contents,
-                        )
-                        channel_claims.extend(new_claims)
+                # `/daily claim` claims
+                elif table["name"].startswith("bonus_"):
+                    guild_id = int(table["name"][6:])
+                    new_claims = map(
+                        lambda row: (guild_id, row["user"]), table_contents
+                    )
+                    daily_claims.extend(new_claims)
 
-                    # `/daily claim` claims
-                    elif table["name"].startswith("bonus_"):
-                        guild_id = int(table["name"][6:])
-                        new_claims = map(
-                            lambda row: (guild_id, row["user"]), table_contents
-                        )
-                        daily_claims.extend(new_claims)
+                # DoorToDarkness claims (ignored because cog is no longer in use)
+                elif table["name"].startswith("door_"):
+                    pass
 
-                    # DoorToDarkness claims (ignored because cog is no longer in use)
-                    elif table["name"].startswith("door_"):
-                        pass
-
-                    else:
-                        logger.warn(f"Unknown dailies table: {table['name']}")
+                else:
+                    logger.warn(f"Unknown dailies table: {table['name']}")
 
         # Writing to the Postgres database
         async with self.db_pool.acquire() as con:
