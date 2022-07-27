@@ -88,14 +88,14 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
             if before.channel is not None:
                 # UPDATE is a noop if the WHERE clause doesn't match
                 left_gamenight = await con.fetchval(
-                    "WITH left_gamenight AS (SELECT TRUE FROM gamenights WHERE voice_channel = $2)"
-                    "UPDATE voice_logs SET duration = duration + (CURRENT_TIMESTAMP - join_time) WHERE userid = $1 and channel = $2 RETURNING (SELECT * FROM left_gamenight)",
+                    "WITH left_gamenight AS (SELECT TRUE AS left FROM gamenights WHERE voice_channel = $2)"
+                    "UPDATE voice_logs SET duration = duration + (CURRENT_TIMESTAMP - join_time) WHERE userid = $1 and channel = $2 RETURNING (SELECT left FROM left_gamenight)",
                     before.channel.id,
                     member.id,
                 )
 
             if after.channel is not None:
-                await db.execute(
+                await con.execute(
                     "INSERT INTO voice_logs VALUES($1, $2, $3, 0, CURRENT_TIMESTAMP) "
                     "ON CONFLICT(channel, userid) DO UPDATE SET join_time = EXCLUDED.join_time",
                     after.channel.id,
