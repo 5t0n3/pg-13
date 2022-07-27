@@ -128,7 +128,7 @@ class Utilities(commands.Cog):
                 "INSERT INTO daily_claims VALUES($1, $2)", daily_claims
             )
 
-        await logger.info("Databases successfully migrated to PostgreSQL")
+        logger.info("Databases successfully migrated to PostgreSQL")
         await ctx.message.add_reaction("✅")
 
     async def cog_check(self, ctx: commands.Context):
