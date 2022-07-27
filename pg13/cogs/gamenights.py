@@ -12,7 +12,7 @@ from .cog_config import config, configured_guilds
 logger = logging.getLogger(__name__)
 
 
-def gamenight_increments(guild, host_id, db_row):
+def gamenight_increments(db_row, guild, host_id):
     point_thresholds = config["guilds"][str(guild.id)]["thresholds"]
 
     # Convert keys to ints (TOML makes them strings by default)
@@ -37,7 +37,7 @@ def gamenight_increments(guild, host_id, db_row):
 
 
 # TODO: name this function better
-def leaderboard_entry(guild, host_id, base_str, member_info):
+def leaderboard_entry(base_str, member_info, guild, host_id):
     place = member_info[0]
     log_row = member_info[1]
 
