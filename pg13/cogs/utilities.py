@@ -46,6 +46,8 @@ class Utilities(commands.Cog):
         channel_claims = []
         daily_claims = []
         async with aiosqlite.connect("databases/dailies.db") as dailies:
+            dailies.row_factory = aiosqlite.Row
+
             daily_tables = await dailies.execute_fetchall(
                 "SELECT name FROM sqlite_master WHERE type = 'table'"
             )
