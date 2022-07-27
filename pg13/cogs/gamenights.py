@@ -83,6 +83,9 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
         if member.bot or before.channel == after.channel:
             return
 
+        # This needs to be done for the case where a user leaves a voice channel
+        left_gamenight = False
+
         # Check if user's current/previous voice channel had ongoing game night(s)
         async with self.db_pool.acquire() as con:
             if before.channel is not None:
