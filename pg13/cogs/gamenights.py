@@ -176,7 +176,7 @@ class GameNights(commands.GroupCog, group_name="gamenight"):
     async def gamenight_host(
         self, interaction: discord.Interaction, host: discord.Member = None
     ):
-        if config[str(guild.id)].get("thresholds") is None:
+        if config[str(interaction.guild_id)].get("thresholds") is None:
             logger.warn(
                 f"Attempted to start game night in unconfigured guild {interaction.guild.name}"
             )
