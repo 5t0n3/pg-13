@@ -43,8 +43,7 @@ class PG13Bot(commands.Bot):
             "pg13.cogs.dailies",
             "pg13.cogs.gamenights",
             "pg13.cogs.bonus_roles",
-            "pg13.cogs.door_to_darkness",
-            "pg13.cogs.sync",
+            "pg13.cogs.utilities",
         ]
 
         for cog in cog_list:
