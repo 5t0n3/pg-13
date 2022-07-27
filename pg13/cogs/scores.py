@@ -123,7 +123,7 @@ class Scores(commands.Cog):
                 user.id,
             )
 
-        if scores_above is None:
+        if not scores_above:
             return await interaction.response.send_message(
                 "That user doesn't have any points yet.", ephemeral=True
             )
