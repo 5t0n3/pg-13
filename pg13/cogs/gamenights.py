@@ -51,7 +51,11 @@ def leaderboard_entry(base_str, member_info, guild, host_id):
     )
 
 
-class GameNights(commands.GroupCog, group_name="gamenight"):
+class GameNights(
+    commands.GroupCog,
+    group_name="gamenight",
+    group_description="Hosting & awarding points for game nights in voice channels",
+):
     def __init__(self, bot):
         self.bot = bot
         self.db_pool = bot.db_pool

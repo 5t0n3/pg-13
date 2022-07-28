@@ -211,10 +211,6 @@ class Scores(commands.Cog):
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(guild)
 
-    @score_group.error
-    async def score_error(self, interaction: discord.Interaction, error):
-        return
-
 
 async def setup(bot):
     await bot.add_cog(Scores(bot))

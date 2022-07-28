@@ -12,7 +12,11 @@ from .cog_config import configured_guilds, admin_check
 logger = logging.getLogger(__name__)
 
 
-class DailyBonuses(commands.GroupCog, group_name="daily"):
+class DailyBonuses(
+    commands.GroupCog,
+    group_name="daily",
+    group_description="Channel & command daily bonus management",
+):
     def __init__(self, bot):
         self.bot = bot
         self.db_pool = bot.db_pool
