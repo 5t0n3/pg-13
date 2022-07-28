@@ -4,8 +4,6 @@ import aiosqlite
 import discord
 from discord.ext import commands
 
-from .cog_config import configured_guilds
-
 logger = logging.getLogger(__name__)
 
 

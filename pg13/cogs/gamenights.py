@@ -7,7 +7,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from .cog_config import config, configured_guilds
+from .cog_config import config
 
 logger = logging.getLogger(__name__)
 
