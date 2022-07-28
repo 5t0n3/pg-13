@@ -80,14 +80,14 @@ class DailyBonuses(
     @app_commands.describe(
         channel="Channel to reward messages in",
         points="Number of bonus points",
-        attachment="Whether to require an attachment to get points",
+        attachment="Whether to require an attachment (image/link) to get points",
     )
     @app_commands.check(admin_check)
     async def daily_attach(
         self,
         interaction: discord.Interaction,
         channel: discord.TextChannel,
-        points: int = 1,
+        points: int,
         attachment: bool = False,
     ):
         async with self.db_pool.acquire() as con:

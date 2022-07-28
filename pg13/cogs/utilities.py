@@ -14,7 +14,7 @@ class Utilities(commands.Cog):
         self.bot = bot
         self.db_pool = bot.db_pool
 
-    @commands.command(name="sync", description="Sync all slash commands")
+    @commands.command(description="Sync all slash commands")
     async def sync(self, ctx: commands.Context):
         await ctx.bot.tree.sync()
         await ctx.message.add_reaction("🔄")

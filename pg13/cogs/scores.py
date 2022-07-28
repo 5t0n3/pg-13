@@ -98,7 +98,7 @@ class Scores(commands.Cog):
         name="rank",
         description="Display a user's rank & score in this server.",
     )
-    @app_commands.describe(user="The user to display the rank of (default you).")
+    @app_commands.describe(user="The user to display the rank of (default you)")
     async def rank(self, interaction: discord.Interaction, user: discord.Member = None):
         if user is None:
             user = interaction.user
@@ -133,8 +133,11 @@ class Scores(commands.Cog):
         name="set",
         description="Set a user's score to a specific value.",
     )
+    @app_commands.describe(
+        user="Whose score to set", score="The specified user's new score"
+    )
     async def score_set(
-        self, interaction: discord.Interaction, user: discord.Member, points: int
+        self, interaction: discord.Interaction, user: discord.Member, score: int
     ):
         # Bots are ignored for score purposes
         if user.bot:
@@ -149,17 +152,17 @@ class Scores(commands.Cog):
                 f"ON CONFLICT(guild, userid) DO UPDATE SET score = EXCLUDED.score",
                 interaction.guild_id,
                 user.id,
-                points,
+                score,
             )
 
-        logger.debug(f"Updated {user.name}'s score to {points}")
+        logger.debug(f"Updated {user.name}'s score to {score}")
 
         # Update bonus roles, if applicable
         if (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(user.guild)
 
         await interaction.response.send_message(
-            f"Successfully updated {user.name}'s score to **{points}**!"
+            f"Successfully updated {user.name}'s score to **{score}**!"
         )
 
     @score_group.command(
