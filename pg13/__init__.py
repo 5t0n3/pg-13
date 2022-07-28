@@ -8,7 +8,7 @@ from .bot import PG13Bot
 
 def run_bot():
     systemd_handler = journal.JournalHandler(SYSLOG_IDENTIFIER="pg-13")
-    systemd_handler.setLevel("INFO")
+    systemd_handler.setLevel("DEBUG")
 
     log_format = logging.Formatter(
         fmt="[{levelname}] ({name}:{lineno}): {message}",
@@ -18,7 +18,7 @@ def run_bot():
 
     root_logger = logging.getLogger()
     root_logger.addHandler(systemd_handler)
-    root_logger.setLevel("INFO")
+    root_logger.setLevel("DEBUG")
 
     # Only log discord.py error/warning messages
     discord_logger = logging.getLogger("discord")
