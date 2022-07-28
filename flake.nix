@@ -36,6 +36,7 @@
             buildInputs = with pythonPkgs; [ typing-extensions ];
             propagatedBuildInputs = with pythonPkgs; [
               aiosqlite
+              asyncpg
               systemd
               toml
               packages.discordpy-dev
@@ -48,7 +49,7 @@
 
         formatter = pkgs.nixfmt;
 
-        nixosModules.default = { config, ... }:
+        nixosModules.default = { config, pkgs, lib, ... }:
           with nixpkgs.lib;
           let cfg = config.services.pg-13;
           in {
@@ -72,6 +73,7 @@
               users.users.pg-13 = {
                 isSystemUser = true;
                 group = "pg-13";
+                extraGroups = [ "postgres" ];
                 home = "/var/lib/pg-13";
                 createHome = true;
               };
@@ -91,6 +93,17 @@
                   Environment = "CONFIG_PATH=${cfg.configFile}";
                 } else
                   { });
+              };
+
+              services.postgresql = {
+                enable = true;
+                package = pkgs.postgresql_14;
+
+                ensureDatabases = [ "pg_13" ];
+                ensureUsers = [{
+                  name = "pg-13";
+                  ensurePermissions = { "DATABASE pg_13" = "ALL PRIVILEGES"; };
+                }];
               };
             };
           };

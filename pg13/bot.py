@@ -1,17 +1,17 @@
 import logging
 import pathlib
 
+import asyncpg
 import discord
 from discord import app_commands
 from discord.ext import commands
 import toml
 
+logger = logging.getLogger(__name__)
+
 
 class PG13Bot(commands.Bot):
     def __init__(self, config_path):
-        # Get bot root logger
-        self.logger = logging.getLogger("pg13")
-
         # Load TOML configuration
         config = toml.load(config_path)
         self.guild_configs = config["guilds"]
@@ -32,22 +32,18 @@ class PG13Bot(commands.Bot):
         # Set up slash command error handler
         self.tree.on_error = self.handle_command_error
 
-        # Ensure database folder exists
-        db_path = pathlib.Path("databases/")
-        if not db_path.exists():
-            db_path.mkdir()
-
     def run(self):
         super().run(self._token, log_handler=None)
 
     async def setup_hook(self):
+        self.db_pool = await asyncpg.create_pool(database="pg_13", user="pg-13")
+
         cog_list = [
             "pg13.cogs.scores",
             "pg13.cogs.dailies",
-            "pg13.cogs.game_nights",
+            "pg13.cogs.gamenights",
             "pg13.cogs.bonus_roles",
-            "pg13.cogs.door_to_darkness",
-            "pg13.cogs.sync",
+            "pg13.cogs.utilities",
         ]
 
         for cog in cog_list:
@@ -56,7 +52,7 @@ class PG13Bot(commands.Bot):
     async def on_ready(self):
         await self.update_presence()
 
-        self.logger.info("Now running!")
+        logger.info("Now running!")
 
     async def handle_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
@@ -64,6 +60,16 @@ class PG13Bot(commands.Bot):
         if isinstance(error, app_commands.CheckFailure):
             await interaction.response.send_message(
                 "Hey, you don't have permission to do that :)", ephemeral=True
+            )
+
+        else:
+            await interaction.response.send_message(
+                "Oops! Something went wrong while executing that command.",
+                ephemeral=True,
+            )
+            logger.error(
+                f"Error while executing command `/{interaction.command.qualified_name}`:",
+                exc_info=error,
             )
 
     async def update_presence(self):
