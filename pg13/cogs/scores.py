@@ -199,7 +199,6 @@ class Scores(commands.Cog):
 
     async def increment_score(self, member, points, reason=None):
         await self.bulk_increment_scores(member.guild, [(member.id, points)], reason)
-        logger.debug(f"Changed {member.name}'s score by {points} points.")
 
     # TODO: add a reason parameter for logging purposes
     async def bulk_increment_scores(self, guild, increments, reason=None):
@@ -215,7 +214,7 @@ class Scores(commands.Cog):
             map(lambda inc: f"{inc[0]} -> {inc[1]} points", increments)
         )
         logger.debug(
-            f"User score increments: " + f" (reason: {reason})"
+            f"User score increments: {affected_users}" + f" (reason: {reason})"
             if reason is not None
             else ""
         )
