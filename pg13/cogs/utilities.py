@@ -16,7 +16,7 @@ class Utilities(commands.Cog):
 
     @commands.command(description="Sync all slash commands")
     async def sync(self, ctx: commands.Context):
-        for guild in self.bot.guilds():
+        for guild in self.bot.guilds:
             await self.bot.tree.sync(guild=guild)
         await self.bot.tree.sync()
 
