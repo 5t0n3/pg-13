@@ -183,7 +183,7 @@ class Scores(commands.Cog):
             )
 
         # Update scores in database
-        await self.increment_score(user, points)
+        await self.increment_score(user, points, reason="User score adjusted")
 
         # Incrementing user score
         if points >= 0:
@@ -197,12 +197,12 @@ class Scores(commands.Cog):
                 f"Took {-points} points from {user.name}!"
             )
 
-    async def increment_score(self, member, points):
-        await self.bulk_increment_scores(member.guild, [(member.id, points)])
+    async def increment_score(self, member, points, reason=None):
+        await self.bulk_increment_scores(member.guild, [(member.id, points)], reason)
         logger.debug(f"Changed {member.name}'s score by {points} points.")
 
     # TODO: add a reason parameter for logging purposes
-    async def bulk_increment_scores(self, guild, increments, update_roles=True):
+    async def bulk_increment_scores(self, guild, increments, reason=None):
         """Changes a user's score by some amount"""
         async with self.db_pool.acquire() as con:
             await con.executemany(
@@ -211,7 +211,16 @@ class Scores(commands.Cog):
                 [(guild.id, *increment) for increment in increments],
             )
 
-        if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
+        affected_users = ", ".join(
+            map(lambda inc: f"{inc[0]} -> {inc[1]} points", increments)
+        )
+        logger.debug(
+            f"User score increments: " + f" (reason: {reason})"
+            if reason is not None
+            else ""
+        )
+
+        if (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(guild)
 
 

@@ -160,7 +160,9 @@ class GameNights(
             point_increments = filter(
                 lambda bonus: bonus is not None, map(guild_increments, participants)
             )
-            await scores_cog.bulk_increment_scores(channel.guild, point_increments)
+            await scores_cog.bulk_increment_scores(
+                channel.guild, point_increments, reason="Gamenight participation points"
+            )
 
         summary_channel = channel.guild.get_channel(gamenight_info[0]["start_channel"])
         await summary_channel.send(

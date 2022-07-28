@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 class BonusRoles(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.last_places = {}
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -57,12 +56,6 @@ class BonusRoles(commands.Cog):
         for id in lost_role:
             if (member := guild.get_member(id)) is not None:
                 await member.remove_roles(bonus_role, reason="Lost bonus role")
-
-        if (scores_cog := self.bot.get_cog("Scores")) is not None:
-            increments = zip(gained_role, itertools.repeat(5))
-            await scores_cog.bulk_increment_scores(
-                guild, increments, update_roles=False
-            )
 
 
 async def setup(bot):

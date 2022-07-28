@@ -71,8 +71,9 @@ class DoorToDarkness(commands.Cog):
         rows_updated = int(claim_result.split(" ")[-1])
 
         if rows_updated != 0 and (scores := self.bot.get_cog("Scores")) is not None:
-            await scores.increment_score(message.author, 1)
-            logger.debug(f"User {message.author.id} claimed door to darkness point")
+            await scores.increment_score(
+                message.author, 1, reason="Door to darkness claim"
+            )
 
     @tasks.loop(time=datetime.time(11, 57, 0, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def clear_door_claims(self):

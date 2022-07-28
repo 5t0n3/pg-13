@@ -66,7 +66,9 @@ class DailyBonuses(
         else:
             # Give user points if they haven't claimed it
             if (scores_cog := self.bot.get_cog("Scores")) is not None:
-                await scores_cog.increment_score(interaction.user, 3)
+                await scores_cog.increment_score(
+                    interaction.user, 3, "Claimed daily reward"
+                )
 
             await interaction.response.send_message(
                 "Succesfully claimed your daily bonus!"
@@ -169,9 +171,10 @@ class DailyBonuses(
             bonus_points is not None
             and (scores_cog := self.bot.get_cog("Scores")) is not None
         ):
-            await scores_cog.increment_score(message.author, bonus_points)
-            logger.debug(
-                f"User {message.author.name} claimed a daily in #{message.channel.name}"
+            await scores_cog.increment_score(
+                message.author,
+                bonus_points,
+                reason=f"Bonus claim in #{message.channel.name}",
             )
 
     @tasks.loop(time=datetime.time(23, 58, tzinfo=ZoneInfo("America/Los_Angeles")))
