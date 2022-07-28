@@ -36,7 +36,6 @@ def gamenight_increments(db_row, guild, host_id):
         return None
 
 
-# TODO: name this function better
 def leaderboard_entry(base_str, member_info, guild, host_id):
     place = member_info[0]
     log_row = member_info[1]
@@ -52,7 +51,6 @@ def leaderboard_entry(base_str, member_info, guild, host_id):
     )
 
 
-@app_commands.guilds(*configured_guilds)
 class GameNights(commands.GroupCog, group_name="gamenight"):
     def __init__(self, bot):
         self.bot = bot

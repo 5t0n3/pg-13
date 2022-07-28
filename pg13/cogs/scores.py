@@ -42,14 +42,12 @@ class Scores(commands.Cog):
     score_group = app_commands.Group(
         name="score",
         description="Score manipulation commands",
-        guild_ids=configured_guilds,
     )
 
     @app_commands.command(
         name="leaderboard",
         description="Display the score leaderboard for the current server.",
     )
-    @app_commands.guilds(*configured_guilds)
     async def leaderboard(self, interaction: discord.Interaction):
         leaderboard = discord.Embed(
             title=f"{interaction.guild.name} Leaderboard", description=""
@@ -81,7 +79,6 @@ class Scores(commands.Cog):
         name="total",
         description="Check the total amount of points of members of this server.",
     )
-    @app_commands.guilds(*configured_guilds)
     async def total(self, interaction: discord.Interaction):
         async with self.db_pool.acquire() as con:
             guild_total = await con.fetchval(
@@ -97,13 +94,11 @@ class Scores(commands.Cog):
                 f"Total points for this server: **{guild_total}**"
             )
 
-    # TODO: Remove after leaderboard pagination is implemented?
     @app_commands.command(
         name="rank",
         description="Display a user's rank & score in this server.",
     )
     @app_commands.describe(user="The user to display the rank of (default you).")
-    @app_commands.guilds(*configured_guilds)
     async def rank(self, interaction: discord.Interaction, user: discord.Member = None):
         if user is None:
             user = interaction.user
@@ -179,7 +174,6 @@ class Scores(commands.Cog):
         self, interaction: discord.Interaction, user: discord.Member, points: int
     ):
         # Bots are ignored for score purposes
-        # TODO: Move to a group-wide check?
         if user.bot:
             return await interaction.response.send_message(
                 f"{user.name} is a bot and cannot get points."
@@ -216,6 +210,10 @@ class Scores(commands.Cog):
 
         if update_roles and (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
             await bonus_cog.update_bonus_roles(guild)
+
+    @score_group.error
+    async def score_error(self, interaction: discord.Interaction, error):
+        return
 
 
 async def setup(bot):

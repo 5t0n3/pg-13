@@ -16,9 +16,7 @@ class Utilities(commands.Cog):
 
     @commands.command(name="sync", description="Sync all slash commands")
     async def sync(self, ctx: commands.Context):
-        # TODO: Sync global commands instead
-        for guild in configured_guilds:
-            await ctx.bot.tree.sync(guild=discord.Object(guild))
+        await ctx.bot.tree.sync()
         await ctx.message.add_reaction("🔄")
         logger.info("Successfully synced all application commands!")
 

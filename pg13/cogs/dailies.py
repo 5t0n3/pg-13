@@ -12,7 +12,6 @@ from .cog_config import configured_guilds, admin_check
 logger = logging.getLogger(__name__)
 
 
-@app_commands.guilds(*configured_guilds)
 class DailyBonuses(commands.GroupCog, group_name="daily"):
     def __init__(self, bot):
         self.bot = bot
