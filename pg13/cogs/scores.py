@@ -55,7 +55,7 @@ class Scores(commands.Cog):
 
         async with self.db_pool.acquire() as con:
             descending_scores = await con.fetch(
-                "SELECT userid, score FROM SCORES WHERE guild = $1 ORDER BY score DESC",
+                "SELECT userid, score FROM scores WHERE guild = $1 ORDER BY score DESC",
                 interaction.guild_id,
             )
 
@@ -112,7 +112,7 @@ class Scores(commands.Cog):
             scores_above = await con.fetch(
                 "WITH guild_scores AS (SELECT score, userid FROM scores WHERE guild = $1), "
                 "user_score as (SELECT score FROM guild_scores WHERE userid = $2) "
-                "SELECT guild_scores.score FROM guild_scores, user_score WHERE guild_scores.score >= user_score.score "
+                "SELECT score FROM guild_scores WHERE score >= (SELECT score FROM user_score) "
                 "ORDER BY score DESC",
                 interaction.guild_id,
                 user.id,

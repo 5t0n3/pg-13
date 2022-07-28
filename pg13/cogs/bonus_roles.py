@@ -40,7 +40,8 @@ class BonusRoles(commands.Cog):
         async with self.bot.db_pool.acquire() as con:
             # TODO: Handle cases where someone in the top 12 left a server
             top_12 = await con.fetch(
-                "SELECT userid FROM scores ORDER BY score DESC LIMIT 12"
+                "SELECT userid FROM scores WHERE guild = $1 ORDER BY score DESC LIMIT 12",
+                guild.id,
             )
 
         top_users = set(map(lambda row: row["userid"], top_12))
