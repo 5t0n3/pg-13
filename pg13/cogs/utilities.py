@@ -16,7 +16,10 @@ class Utilities(commands.Cog):
 
     @commands.command(description="Sync all slash commands")
     async def sync(self, ctx: commands.Context):
-        await ctx.bot.tree.sync()
+        for guild in self.bot.guilds():
+            await self.bot.tree.sync(guild=guild)
+        await self.bot.tree.sync()
+
         await ctx.message.add_reaction("🔄")
         logger.info("Successfully synced all application commands!")
 
