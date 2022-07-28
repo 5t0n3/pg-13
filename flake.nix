@@ -82,7 +82,7 @@
                 enable = true;
                 description = "the PG-13 point system bot";
                 wants = [ "network-online.target" ];
-                after = [ "network-online.target" ];
+                after = [ "network-online.target" "postgresql.service" ];
                 wantedBy = [ "multi-user.target" ];
 
                 serviceConfig = {
