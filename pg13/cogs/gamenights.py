@@ -222,7 +222,7 @@ class GameNights(
         async with self.db_pool.acquire() as con:
             # Don't delete logs from channels with an ongoing gamenight
             await con.execute(
-                "DELETE FROM voice_logs WHERE channel NOT IN (SELECT voice_channel FROM gamenights"
+                "DELETE FROM voice_logs WHERE channel NOT IN (SELECT voice_channel FROM gamenights)"
             )
 
 

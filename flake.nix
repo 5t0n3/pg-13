@@ -104,12 +104,6 @@
                   name = "pg-13";
                   ensurePermissions = { "DATABASE pg_13" = "ALL PRIVILEGES"; };
                 }];
-
-                # settings = {
-                #   listen_addresses = lib.mkForce "";
-                #   unix_socket_directories = "/tmp";
-                #   unix_socket_permissions = "0770";
-                # };
               };
             };
           };
