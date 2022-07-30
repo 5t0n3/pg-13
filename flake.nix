@@ -48,9 +48,9 @@
           pkgs.mkShell { packages = [ packages.pg-13 pkgs.black ]; };
 
         formatter = pkgs.nixfmt;
-
+      }) // {
         nixosModules.default = { config, pkgs, lib, ... }:
-          with nixpkgs.lib;
+          with lib;
           let cfg = config.services.pg-13;
           in {
             options.services.pg-13 = {
@@ -88,7 +88,7 @@
                 serviceConfig = {
                   User = "pg-13";
                   WorkingDirectory = "/var/lib/pg-13";
-                  ExecStart = "${packages.pg-13}/bin/pg-13";
+                  ExecStart = "${self.packages.${pkgs.system}.pg-13}/bin/pg-13";
                 } // (if cfg.configFile != null then {
                   Environment = "CONFIG_PATH=${cfg.configFile}";
                 } else
@@ -107,5 +107,7 @@
               };
             };
           };
-      });
+
+        nixosModule = self.nixosModules.default;
+      };
 }
