@@ -16,6 +16,7 @@ class Leaderboard(discord.ui.View):
         self.guild = guild
         self.db_pool = db_pool
         self.start_place = 1
+        self.num_members = 0
         self.offset = 0
 
     async def build_leaderboard(self):
@@ -32,15 +33,15 @@ class Leaderboard(discord.ui.View):
             for row in user_scores
             if (member := self.guild.get_member(row["userid"])) is not None
         ]
+        self.num_members = len(valid_members)
         leaderboard = functools.reduce(
             build_embed, enumerate(valid_members, start=self.start_place), ""
         )
 
-        return leaderboard, len(valid_members)
+        return leaderboard
 
     async def init_leaderboard(self, interaction):
-        description, num_members = await self.build_leaderboard()
-        self.start_place += num_members
+        description = await self.build_leaderboard()
 
         leaderboard = discord.Embed(
             title=f"{self.guild.name} Leaderboard", description=description
@@ -52,8 +53,8 @@ class Leaderboard(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         self.offset -= 15
-        description, num_members = await self.build_leaderboard()
-        self.start_place -= num_members
+        self.start_place -= self.num_members
+        description = await self.build_leaderboard()
 
         if self.offset == 0:
             button.disabled = True
@@ -70,18 +71,19 @@ class Leaderboard(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         self.offset += 15
-        description, num_members = await self.build_leaderboard()
+        prev_start = self.start_place
+        self.start_place += self.num_members
+        description = await self.build_leaderboard()
 
         self.leaderboard_left.disabled = False
 
-        if num_members == 0:
+        if self.num_members == 0:
             button.disabled = True
             self.offset -= 15
+            self.start_place = prev_start
             await interaction.response.edit_message(view=self)
 
         else:
-            self.start_place += num_members
-
             leaderboard = discord.Embed(
                 title=f"{interaction.guild.name} Leaderboard", description=description
             )
