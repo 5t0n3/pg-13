@@ -12,6 +12,7 @@ def build_embed(base_str, member_info):
 
 class Leaderboard(discord.ui.View):
     def __init__(self, guild, db_pool):
+        super().__init__()
         self.guild = guild
         self.db_pool = db_pool
         self.start_place = 1
