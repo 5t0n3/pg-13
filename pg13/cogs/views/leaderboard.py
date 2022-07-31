@@ -65,12 +65,12 @@ class Leaderboard(discord.ui.View):
         )
         await interaction.response.edit_message(embed=leaderboard, view=self)
 
-    @discord.ui.button(emoji="◀️", custom_id="leaderboard:right")
+    @discord.ui.button(emoji="▶️️", custom_id="leaderboard:right")
     async def leaderboard_right(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         self.offset += 15
-        description, num_members = await self.build_leaderboard(interaction.guild)
+        description, num_members = await self.build_leaderboard()
 
         if num_members == 0:
             button.disabled = True
