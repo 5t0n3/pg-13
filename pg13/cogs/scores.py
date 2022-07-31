@@ -5,6 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from .cog_config import admin_check
+from .views import Leaderboard
 
 logger = logging.getLogger(__name__)
 
@@ -49,31 +50,8 @@ class Scores(commands.Cog):
         description="Display the score leaderboard for the current server.",
     )
     async def leaderboard(self, interaction: discord.Interaction):
-        leaderboard = discord.Embed(
-            title=f"{interaction.guild.name} Leaderboard", description=""
-        )
-
-        async with self.db_pool.acquire() as con:
-            descending_scores = await con.fetch(
-                "SELECT userid, score FROM scores WHERE guild = $1 ORDER BY score DESC",
-                interaction.guild_id,
-            )
-
-        place = 1
-        for row in descending_scores:
-            if (member := interaction.guild.get_member(row["userid"])) is not None:
-                leaderboard.description += (
-                    f"{place}: {member.mention} - {row['score']} points\n"
-                )
-
-                if place >= 15:
-                    break
-
-                place += 1
-
-        # TODO: Record the leaderboard message id for pagination purposes
-
-        await interaction.response.send_message(embed=leaderboard)
+        leaderboard_view = Leaderboard(interaction.guild, self.db_pool)
+        await leaderboard_view.init_leaderboard()
 
     @app_commands.command(
         name="total",
