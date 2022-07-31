@@ -37,14 +37,14 @@ class Leaderboard(discord.ui.View):
 
         return leaderboard, len(valid_members)
 
-    async def init_leaderboard(self):
+    async def init_leaderboard(self, interaction):
         description, num_members = await self.build_leaderboard()
         self.start_place += num_members
 
         leaderboard = discord.Embed(
-            title=f"{interaction.guild.name} Leaderboard", description=description
+            title=f"{self.guild.name} Leaderboard", description=description
         )
-        await interaction.response.edit_message(embed=leaderboard, view=self)
+        await interaction.response.send_message(embed=leaderboard, view=self)
 
     @discord.ui.button(emoji="◀️", custom_id="leaderboard:left", disabled=True)
     async def leaderboard_left(

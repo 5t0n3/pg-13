@@ -51,7 +51,7 @@ class Scores(commands.Cog):
     )
     async def leaderboard(self, interaction: discord.Interaction):
         leaderboard_view = Leaderboard(interaction.guild, self.db_pool)
-        await leaderboard_view.init_leaderboard()
+        await leaderboard_view.init_leaderboard(interaction)
 
     @app_commands.command(
         name="total",
