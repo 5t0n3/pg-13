@@ -47,7 +47,7 @@ class Leaderboard(discord.ui.View):
         )
         await interaction.response.send_message(embed=leaderboard, view=self)
 
-    @discord.ui.button(emoji="◀️", custom_id="leaderboard:left", disabled=True)
+    @discord.ui.button(emoji="⬅️", custom_id="leaderboard:left", disabled=True)
     async def leaderboard_left(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
@@ -65,7 +65,7 @@ class Leaderboard(discord.ui.View):
         )
         await interaction.response.edit_message(embed=leaderboard, view=self)
 
-    @discord.ui.button(emoji="▶️️", custom_id="leaderboard:right")
+    @discord.ui.button(emoji="➡️", custom_id="leaderboard:right")
     async def leaderboard_right(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
