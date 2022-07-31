@@ -21,7 +21,7 @@ class Leaderboard(discord.ui.View):
         async with self.db_pool.acquire() as con:
             user_scores = await con.fetch(
                 "SELECT userid, score FROM scores WHERE guild = $1 "
-                "ORDER BY score DESC OFFSET $2 FETCH 15",
+                "ORDER BY score DESC OFFSET $2 ROWS FETCH NEXT 15 ROWS ONLY",
                 self.guild.id,
                 self.offset,
             )
