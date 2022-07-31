@@ -72,13 +72,15 @@ class Leaderboard(discord.ui.View):
         self.offset += 15
         description, num_members = await self.build_leaderboard()
 
+        self.leaderboard_left.disabled = False
+
         if num_members == 0:
             button.disabled = True
+            self.offset -= 15
             await interaction.response.edit_message(view=self)
 
         else:
             self.start_place += num_members
-            self.leaderboard_left.disabled = False
 
             leaderboard = discord.Embed(
                 title=f"{interaction.guild.name} Leaderboard", description=description
