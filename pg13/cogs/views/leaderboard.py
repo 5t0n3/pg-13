@@ -32,7 +32,7 @@ class Leaderboard(discord.ui.View):
             if (member := self.guild.get_member(row["userid"])) is not None
         ]
         leaderboard = functools.reduce(
-            build_embed, enumerate(valid_members, start=self.start_place)
+            build_embed, enumerate(valid_members, start=self.start_place), ""
         )
 
         return leaderboard, len(valid_members)
