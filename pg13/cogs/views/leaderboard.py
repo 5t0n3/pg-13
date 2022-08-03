@@ -18,7 +18,7 @@ class Leaderboard(discord.ui.View):
         self.db_pool = db_pool
         self.offset = 0
 
-    async def init_leaderboard(self):
+    async def init_leaderboard(self, interaction):
         async with self.db_pool.acquire() as con:
             user_scores = await con.fetch(
                 "SELECT userid, score FROM scores WHERE guild = $1 "
