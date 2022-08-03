@@ -26,8 +26,11 @@ class Leaderboard(discord.ui.View):
                 self.guild.id,
             )
 
-        self.current_users = [(member, row["score"]) for row in user_scores[:15]]
-        self.next_users = user_scores[15:]
+        bundled_users = [
+            (self.guild.get_member(row["userid"]), row["score"]) for row in user_scores
+        ]
+        self.current_users = bundled_users[:15]
+        self.next_users = bundled_users[15:]
 
         self.leaderboard_right.disabled = len(self.next_users) == 0
 
@@ -59,12 +62,17 @@ class Leaderboard(discord.ui.View):
         self.offset -= 15
 
         async with self.db_pool.acquire() as con:
-            self.current_users = await con.fetch(
+            unbundled_current = await con.fetch(
                 "SELECT userid, score FROM scores WHERE guild = $1 "
                 "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT 15 ROWS ONLY",
                 self.guild.id,
                 self.offset,
             )
+
+        self.current_users = [
+            (self.guild.get_member(row["userid"]), row["score"])
+            for row in unbundled_current
+        ]
 
         await self.update(interaction)
 
@@ -76,11 +84,16 @@ class Leaderboard(discord.ui.View):
         self.offset += 15
 
         async with self.db_pool.acquire() as con:
-            self.next_users = await con.fetch(
+            unbundled_next = await con.fetch(
                 "SELECT userid, score FROM scores WHERE guild = $1 "
                 "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT 15 ROWS ONLY",
                 self.guild.id,
                 self.offset,
             )
+
+        self.next_users = [
+            (self.guild.get_member(row["userid"]), row["score"])
+            for row in unbundled_next
+        ]
 
         await self.update(interaction)
