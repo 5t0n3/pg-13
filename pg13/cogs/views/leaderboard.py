@@ -24,7 +24,6 @@ class Leaderboard(discord.ui.View):
                 "SELECT userid, score FROM scores WHERE guild = $1 "
                 "ORDER BY score DESC, userid DESC FETCH NEXT 30 ROWS ONLY",
                 self.guild.id,
-                self.offset,
             )
 
         self.current_users = [(member, row["score"]) for row in user_scores[:15]]
