@@ -138,87 +138,85 @@ class Leaderboard(discord.ui.View):
             f"current users: {[bundle.member.display_name for bundle in self.current_users]}"
         )
 
-        # Reached the end of the leaderboard
-        if len(self.offsets) > self.page + 2 and self.offsets[self.page + 2] == -1:
-            self.next_users = []
-            return await self.update(interaction)
+        # Offset already exists for 2 pages forward (i.e. already visited next page)
+        if len(self.offsets) > self.page + 2:
+            # Reached the end of the leaderboard
+            if self.offsets[self.page + 2] == -1:
+                self.next_users = []
 
-        elif len(self.current_users) < 15:
-            async with self.db_pool.acquire() as con:
-                unbundled_complement = await con.fetch(
-                    "SELECT userid, score FROM scores WHERE guild = $1 "
-                    "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT $3 ROWS ONLY",
-                    self.guild.id,
-                    self.current_offset + self.lookahead_length,
-                    15 - len(self.current_users) + 15,
-                )
+            else:
+                async with self.db_pool.acquire() as con:
+                    unbundled_next = await con.fetch(
+                        "SELECT userid, score FROM scores WHERE guild = $1 "
+                        "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT $3 ROWS ONLY",
+                        self.guild.id,
+                        self.next_offset,
+                        self.offsets[self.page + 2] - self.next_offset,
+                    )
 
-            raw_bundled = [
-                ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
-                for row in unbundled_complement
-            ]
-            logger.debug(
-                f"Raw bundled: {[bundle.member.display_name if bundle.member is not None else None for bundle in raw_bundled]}"
-            )
+                # This is theoretically guaranteed to be 15 users
+                self.next_users = [
+                    ScoreInfo(member, row["score"])
+                    for row in unbundled_next
+                    if (member := self.guild.get_member(row["userid"])) is not None
+                ]
 
-            current_complement, total_complement = filter_members(
-                raw_bundled, 15 - len(self.current_users)
-            )
-            self.current_users.extend(current_complement)
-
-            self.offsets.append(
-                self.current_offset + self.lookahead_length + total_complement
-            )
-
-            # Reached end of leaderboard
-            if len(self.current_users) < 15:
-                self.offsets.append(-1)
-
-            raw_next_bundles = raw_bundled[total_complement:]
-            logger.debug(
-                f"Raw next bundles: {[bundle.member.display_name if bundle.member is not None else None for bundle in raw_next_bundles]}"
-            )
-
-        # An offset exists 2 pages ahead of this one
-        elif len(self.offsets) > self.page + 2:
-            async with self.db_pool.acquire() as con:
-                unbundled_next = await con.fetch(
-                    "SELECT userid, score FROM scores WHERE guild = $1 "
-                    "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT $3 ROWS ONLY",
-                    self.guild.id,
-                    self.next_offset,
-                    self.offsets[self.page + 2] - self.next_offset,
-                )
-
-            self.next_users = [
-                ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
-                for row in unbundled_next
-                if (member := self.guild.get_member(row["userid"])) is not None
-            ]
-
-            return await self.update(interaction)
-
+        # Visiting new pages
         else:
-            async with self.db_pool.acquire() as con:
-                unbundled_next = await con.fetch(
-                    "SELECT userid, score FROM scores WHERE guild = $1 "
-                    "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT 15 ROWS ONLY",
-                    self.guild.id,
-                    self.next_offset,
+            # Need to complete current (displayed) page
+            if len(self.current_users) < 15:
+                async with self.db_pool.acquire() as con:
+                    unbundled_complement = await con.fetch(
+                        "SELECT userid, score FROM scores WHERE guild = $1 "
+                        "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT $3 ROWS ONLY",
+                        self.guild.id,
+                        # Offset skips users already present in current_users
+                        self.current_offset + self.lookahead_length,
+                        15 - len(self.current_users) + 15,
+                    )
+
+                raw_bundled = [
+                    ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
+                    for row in unbundled_complement
+                ]
+
+                # Complete the current 15 user set & record the db offset
+                current_complement, total_complement = filter_members(
+                    raw_bundled, 15 - len(self.current_users)
+                )
+                self.current_users.extend(current_complement)
+                self.offsets.append(
+                    self.current_offset + self.lookahead_length + total_complement
                 )
 
-            raw_next_bundles = [
-                ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
-                for row in unbundled_next
-            ]
+                raw_next_bundles = raw_bundled[total_complement:]
+                logger.debug(
+                    f"Raw next bundles: {[bundle.member.display_name if bundle.member is not None else None for bundle in raw_next_bundles]}"
+                )
 
-            self.offsets.append(self.current_offset + self.lookahead_length)
+            else:
+                async with self.db_pool.acquire() as con:
+                    unbundled_next = await con.fetch(
+                        "SELECT userid, score FROM scores WHERE guild = $1 "
+                        "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT 15 ROWS ONLY",
+                        self.guild.id,
+                        self.next_offset,
+                    )
 
-        valid_next, lookahead = filter_members(raw_next_bundles, 15)
-        self.next_users = valid_next
-        logger.debug(
-            f"next_users: {[bundle.member.display_name for bundle in self.next_users]}"
-        )
-        self.lookahead_length = lookahead
+                raw_next_bundles = [
+                    ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
+                    for row in unbundled_next
+                ]
+
+                self.offsets.append(self.current_offset + self.lookahead_length)
+
+            # Fetch (some of) the users to be displayed on the next page
+            valid_next, lookahead = filter_members(raw_next_bundles, 15)
+            self.next_users = valid_next
+            self.lookahead_length = lookahead
+
+            # Append a sentinel if the end of the leaderboard was reached
+            if len(self.next_users) == 0:
+                self.offsets.append(-1)
 
         await self.update(interaction)
