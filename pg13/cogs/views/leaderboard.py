@@ -1,9 +1,12 @@
 import collections
 import functools
+import logging
 
 import discord
 
 ScoreInfo = collections.namedtuple("ScoreInfo", ["member", "score"])
+
+logger = logging.getLogger(__name__)
 
 
 def build_embed(base_str, member_info):
@@ -144,7 +147,7 @@ class Leaderboard(discord.ui.View):
                 ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
                 for row in unbundled_complement
             ]
-            self.logger.debug(f"Raw bundled: {raw_bundled}")
+            logger.debug(f"Raw bundled: {raw_bundled}")
 
             current_complement, total_complement = filter_members(
                 raw_bundled, 15 - len(self.current_users)
@@ -155,7 +158,7 @@ class Leaderboard(discord.ui.View):
                 self.current_offset + self.lookahead_length + total_complement
             )
             raw_next_bundles = raw_bundled[total_complement:]
-            self.logger.debug(f"Raw next bundles: {raw_next_bundles}")
+            logger.debug(f"Raw next bundles: {raw_next_bundles}")
 
         # An offset exists 2 pages ahead of this one
         elif len(self.offsets) > self.page + 2:
