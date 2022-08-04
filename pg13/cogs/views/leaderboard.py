@@ -143,7 +143,7 @@ class Leaderboard(discord.ui.View):
                     "SELECT userid, score FROM scores WHERE guild = $1 "
                     "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT $3 ROWS ONLY",
                     self.guild.id,
-                    self.current_offset + len(self.current_users),
+                    self.current_offset + self.lookahead_length,
                     15 - len(self.current_users) + 15,
                 )
 
