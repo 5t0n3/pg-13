@@ -138,7 +138,12 @@ class Leaderboard(discord.ui.View):
             f"current users: {[bundle.member.display_name for bundle in self.current_users]}"
         )
 
-        if len(self.current_users) < 15:
+        # Reached the end of the leaderboard
+        if self.offsets[self.page + 2] == -1:
+            self.next_users = []
+            return await self.update(interaction)
+
+        elif len(self.current_users) < 15:
             async with self.db_pool.acquire() as con:
                 unbundled_complement = await con.fetch(
                     "SELECT userid, score FROM scores WHERE guild = $1 "
@@ -164,6 +169,11 @@ class Leaderboard(discord.ui.View):
             self.offsets.append(
                 self.current_offset + self.lookahead_length + total_complement
             )
+
+            # Reached end of leaderboard
+            if len(self.current_users) < 15:
+                self.offsets.append(-1)
+
             raw_next_bundles = raw_bundled[total_complement:]
             logger.debug(
                 f"Raw next bundles: {[bundle.member.display_name if bundle.member is not None else None for bundle in raw_next_bundles]}"
