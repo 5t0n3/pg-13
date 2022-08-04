@@ -21,7 +21,7 @@ def filter_members(bundles, users_needed):
 
     for bundle in bundles:
         if bundle.member is not None:
-            valid_members.append(bundle.member)
+            valid_members.append(bundle)
 
         total_users += 1
 
