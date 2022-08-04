@@ -49,7 +49,13 @@ class Leaderboard(discord.ui.View):
     def next_offset(self):
         return self.offsets[self.page + 1]
 
+    async def interaction_check(self, interaction: discord.Interaction):
+        # Ensure that only the original author can interact with a leaderboard
+        return interaction.user.id == self.leaderboard_user
+
     async def init_leaderboard(self, interaction):
+        self.leaderboard_user = interaction.user.id
+
         async with self.db_pool.acquire() as con:
             user_scores = await con.fetch(
                 "SELECT userid, score FROM scores WHERE guild = $1 "
@@ -85,7 +91,7 @@ class Leaderboard(discord.ui.View):
 
         leaderboard = functools.reduce(
             build_embed,
-            enumerate(self.current_users, start=self.current_offset + 1),
+            enumerate(self.current_users, start=self.current_offset),
             "",
         )
         leaderboard_embed = discord.Embed(
