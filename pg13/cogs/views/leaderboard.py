@@ -133,6 +133,10 @@ class Leaderboard(discord.ui.View):
         self.current_users = self.next_users
         self.page += 1
 
+        logger.debug(
+            f"current users: {[bundle.member.display_name for bundle in self.current_users]}"
+        )
+
         if len(self.current_users) < 15:
             async with self.db_pool.acquire() as con:
                 unbundled_complement = await con.fetch(
@@ -201,6 +205,9 @@ class Leaderboard(discord.ui.View):
 
         valid_next, lookahead = filter_members(raw_next_bundles, 15)
         self.next_users = valid_next
+        logger.debug(
+            f"next_users: {[bundle.member.display_name for bundle in self.next_users]}"
+        )
         self.lookahead_length = lookahead
 
         await self.update(interaction)
