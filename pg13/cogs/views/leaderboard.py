@@ -28,7 +28,7 @@ def filter_members(bundles, users_needed):
         if len(valid_members) == users_needed:
             break
 
-    return valid_members, skips
+    return valid_members, total_users
 
 
 class Leaderboard(discord.ui.View):
