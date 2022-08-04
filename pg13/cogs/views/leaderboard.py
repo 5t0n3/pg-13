@@ -137,7 +137,12 @@ class Leaderboard(discord.ui.View):
             f"current users: {[bundle.member.display_name for bundle in self.current_users]}"
         )
 
-        if len(self.current_users) < 15:
+        # End of the leaderboard
+        if self.next_offset is None:
+            self.next_users = []
+            return await self.update(interaction)
+
+        elif len(self.current_users) < 15:
             async with self.db_pool.acquire() as con:
                 unbundled_complement = await con.fetch(
                     "SELECT userid, score FROM scores WHERE guild = $1 "
@@ -160,13 +165,17 @@ class Leaderboard(discord.ui.View):
             )
             self.current_users.extend(current_complement)
 
-            self.offsets.append(
-                self.current_offset + self.lookahead_length + total_complement
-            )
-            raw_next_bundles = raw_bundled[total_complement:]
-            logger.debug(
-                f"Raw next bundles: {[bundle.member.display_name if bundle.member is not None else None for bundle in raw_next_bundles]}"
-            )
+            if len(self.current_users) < 15:
+                self.offsets.append(None)
+                logger.debug("Reached end of leaderboard")
+            else:
+                self.offsets.append(
+                    self.current_offset + self.lookahead_length + total_complement
+                )
+                raw_next_bundles = raw_bundled[total_complement:]
+                logger.debug(
+                    f"Raw next bundles: {[bundle.member.display_name if bundle.member is not None else None for bundle in raw_next_bundles]}"
+                )
 
         # An offset exists 2 pages ahead of this one
         elif len(self.offsets) > self.page + 2:
