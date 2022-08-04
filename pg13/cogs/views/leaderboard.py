@@ -147,7 +147,9 @@ class Leaderboard(discord.ui.View):
                 ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
                 for row in unbundled_complement
             ]
-            logger.debug(f"Raw bundled: {raw_bundled}")
+            logger.debug(
+                f"Raw bundled: {[bundle.member.display_name for bundle in raw_bundled if bundle.member is not None]}"
+            )
 
             current_complement, total_complement = filter_members(
                 raw_bundled, 15 - len(self.current_users)
@@ -158,7 +160,9 @@ class Leaderboard(discord.ui.View):
                 self.current_offset + self.lookahead_length + total_complement
             )
             raw_next_bundles = raw_bundled[total_complement:]
-            logger.debug(f"Raw next bundles: {raw_next_bundles}")
+            logger.debug(
+                f"Raw next bundles: {[bundle.member.display_name for bundle in raw_next_bundles]}"
+            )
 
         # An offset exists 2 pages ahead of this one
         elif len(self.offsets) > self.page + 2:
