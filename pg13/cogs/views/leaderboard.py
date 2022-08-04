@@ -139,7 +139,7 @@ class Leaderboard(discord.ui.View):
         )
 
         # Reached the end of the leaderboard
-        if self.offsets[self.page + 2] == -1:
+        if len(self.offsets) > self.page + 2 and self.offsets[self.page + 2] == -1:
             self.next_users = []
             return await self.update(interaction)
 
