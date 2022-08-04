@@ -9,7 +9,7 @@ ScoreInfo = collections.namedtuple("ScoreInfo", ["member", "score"])
 logger = logging.getLogger(__name__)
 
 
-def build_embed(base_str, member_info):
+def build_leaderboard(base_str, member_info):
     place = member_info[0]
     score_info = member_info[1]
 
@@ -18,7 +18,7 @@ def build_embed(base_str, member_info):
     )
 
 
-def filter_members(bundles, users_needed):
+def calculate_offset(bundles, users_needed):
     valid_members = []
     total_users = 0
 
@@ -40,8 +40,6 @@ class Leaderboard(discord.ui.View):
         self.guild = guild
         self.db_pool = db_pool
         self.page = 0
-
-        # TODO: should scores be stored directly instead?
         self.offsets = [0]
 
     @property
@@ -70,18 +68,18 @@ class Leaderboard(discord.ui.View):
             ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
             for row in user_scores
         ]
-        valid_users, next_offset = filter_members(bundled_users, 15)
+        valid_users, next_offset = calculate_offset(bundled_users, 15)
         self.current_users = valid_users
         self.offsets.append(next_offset)
 
-        valid_next_users, lookahead = filter_members(bundled_users[next_offset:], 15)
+        valid_next_users, lookahead = calculate_offset(bundled_users[next_offset:], 15)
         self.next_users = valid_next_users
         self.lookahead_length = lookahead
 
         self.leaderboard_right.disabled = len(self.next_users) == 0
 
         leaderboard = functools.reduce(
-            build_embed, enumerate(self.current_users, start=1), ""
+            build_leaderboard, enumerate(self.current_users, start=1), ""
         )
         leaderboard_embed = discord.Embed(
             title=f"{self.guild.name} Leaderboard", description=leaderboard
@@ -93,7 +91,7 @@ class Leaderboard(discord.ui.View):
         self.leaderboard_right.disabled = len(self.next_users) == 0
 
         leaderboard = functools.reduce(
-            build_embed,
+            build_leaderboard,
             enumerate(self.current_users, start=self.page * 15 + 1),
             "",
         )
@@ -133,10 +131,6 @@ class Leaderboard(discord.ui.View):
     ):
         self.current_users = self.next_users
         self.page += 1
-
-        logger.debug(
-            f"current users: {[bundle.member.display_name for bundle in self.current_users]}"
-        )
 
         # Offset already exists for 2 pages forward (i.e. already visited next page)
         if len(self.offsets) > self.page + 2:
@@ -181,7 +175,7 @@ class Leaderboard(discord.ui.View):
                 ]
 
                 # Complete the current 15 user set & record the db offset
-                current_complement, total_complement = filter_members(
+                current_complement, total_complement = calculate_offset(
                     raw_bundled, 15 - len(self.current_users)
                 )
                 self.current_users.extend(current_complement)
@@ -190,9 +184,6 @@ class Leaderboard(discord.ui.View):
                 )
 
                 raw_next_bundles = raw_bundled[total_complement:]
-                logger.debug(
-                    f"Raw next bundles: {[bundle.member.display_name if bundle.member is not None else None for bundle in raw_next_bundles]}"
-                )
 
             else:
                 async with self.db_pool.acquire() as con:
@@ -211,7 +202,7 @@ class Leaderboard(discord.ui.View):
                 self.offsets.append(self.current_offset + self.lookahead_length)
 
             # Fetch (some of) the users to be displayed on the next page
-            valid_next, lookahead = filter_members(raw_next_bundles, 15)
+            valid_next, lookahead = calculate_offset(raw_next_bundles, 15)
             self.next_users = valid_next
             self.lookahead_length = lookahead
 
