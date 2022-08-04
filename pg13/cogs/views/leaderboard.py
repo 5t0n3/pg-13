@@ -161,7 +161,7 @@ class Leaderboard(discord.ui.View):
             )
             raw_next_bundles = raw_bundled[total_complement:]
             logger.debug(
-                f"Raw next bundles: {[bundle.member.display_name for bundle in raw_next_bundles]}"
+                f"Raw next bundles: {[bundle.member.display_name for bundle in raw_next_bundles if bundle.member is not None]}"
             )
 
         # An offset exists 2 pages ahead of this one
