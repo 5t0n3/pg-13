@@ -46,7 +46,7 @@ class Leaderboard(discord.ui.View):
         return self.offsets[self.page]
 
     @property
-    def current_offset(self):
+    def next_offset(self):
         return self.offsets[self.page + 1]
 
     async def init_leaderboard(self, interaction):
