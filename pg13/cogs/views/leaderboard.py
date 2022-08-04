@@ -136,24 +136,26 @@ class Leaderboard(discord.ui.View):
                     "SELECT userid, score FROM scores WHERE guild = $1 "
                     "ORDER BY score DESC, userid DESC OFFSET $2 ROWS FETCH NEXT $3 ROWS ONLY",
                     self.guild.id,
-                    self.current_offset + len(self.next_users),
-                    15 - len(self.next_users) + 15,
+                    self.current_offset + len(self.current_users),
+                    15 - len(self.current_users) + 15,
                 )
 
-            raw_unbundled = [
+            raw_bundled = [
                 ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
                 for row in unbundled_complement
             ]
+            self.logger.debug(f"Raw bundled: {raw_bundled}")
 
             current_complement, total_complement = filter_members(
-                raw_unbundled, 15 - len(self.current_users)
+                raw_bundled, 15 - len(self.current_users)
             )
             self.current_users.extend(current_complement)
 
             self.offsets.append(
                 self.current_offset + self.lookahead_length + total_complement
             )
-            raw_next_bundles = raw_unbundled[total_complement:]
+            raw_next_bundles = raw_bundled[total_complement:]
+            self.logger.debug(f"Raw next bundles: {raw_next_bundles}")
 
         # An offset exists 2 pages ahead of this one
         elif len(self.offsets) > self.page + 2:
