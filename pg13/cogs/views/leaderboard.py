@@ -65,7 +65,7 @@ class Leaderboard(discord.ui.View):
         self.current_users = valid_users
         self.offsets.append(next_offset)
 
-        valid_next_users, lookahead = filter_members(bundled_users[next_offset:])
+        valid_next_users, lookahead = filter_members(bundled_users[next_offset:], 15)
         self.next_users = valid_next_users
         self.lookahead_length = lookahead
 
