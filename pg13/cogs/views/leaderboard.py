@@ -78,7 +78,7 @@ class Leaderboard(discord.ui.View):
         self.leaderboard_right.disabled = len(self.next_users) == 0
 
         leaderboard = functools.reduce(
-            build_embed, enumerate(self.current_users, start=1), ""
+            build_embed, enumerate(self.current_users, start=self.page * 15 + 1), ""
         )
         leaderboard_embed = discord.Embed(
             title=f"{self.guild.name} Leaderboard", description=leaderboard
