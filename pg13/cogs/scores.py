@@ -90,7 +90,7 @@ class Scores(commands.Cog):
             at_least_equal = await con.fetch(
                 "WITH guild_scores AS (SELECT score, userid FROM scores WHERE guild = $1), "
                 "user_score as (SELECT score FROM guild_scores WHERE userid = $2) "
-                "SELECT score FROM guild_scores WHERE score >= (SELECT score FROM user_score) "
+                "SELECT score, userid FROM guild_scores WHERE score >= (SELECT score FROM user_score) "
                 "ORDER BY score DESC",
                 interaction.guild_id,
                 user.id,
@@ -111,7 +111,7 @@ class Scores(commands.Cog):
         members_ahead = list(
             itertools.takewhile(lambda member_id: member_id != user.id, in_guild)
         )
-        place = len(members_ahead)
+        place = len(members_ahead) + 1
 
         await interaction.response.send_message(
             f"{user.name} is in **{make_ordinal(place)} place** with **{user_score}** points."
