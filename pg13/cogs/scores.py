@@ -1,3 +1,4 @@
+import itertools
 import logging
 
 import discord
