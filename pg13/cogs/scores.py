@@ -87,7 +87,7 @@ class Scores(commands.Cog):
             )
 
         async with self.db_pool.acquire() as con:
-            scores_above = await con.fetch(
+            at_least_equal = await con.fetch(
                 "WITH guild_scores AS (SELECT score, userid FROM scores WHERE guild = $1), "
                 "user_score as (SELECT score FROM guild_scores WHERE userid = $2) "
                 "SELECT score FROM guild_scores WHERE score >= (SELECT score FROM user_score) "
@@ -96,13 +96,23 @@ class Scores(commands.Cog):
                 user.id,
             )
 
-        if not scores_above:
+        if not at_least_equal:
             return await interaction.response.send_message(
                 "That user doesn't have any points yet.", ephemeral=True
             )
 
-        place = len(scores_above)
-        user_score = scores_above[-1]["score"]
+        user_score = at_least_equal[-1]["score"]
+
+        in_guild = [
+            member.id
+            for row in at_least_equal
+            if (member := interaction.guild.get_member(row["userid"])) is not None
+        ]
+        members_ahead = list(
+            itertools.takewhile(lambda member_id: member_id != user.id, in_guild)
+        )
+        place = len(members_ahead)
+
         await interaction.response.send_message(
             f"{user.name} is in **{make_ordinal(place)} place** with **{user_score}** points."
         )
