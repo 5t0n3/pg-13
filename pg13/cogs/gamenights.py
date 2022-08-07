@@ -12,7 +12,7 @@ from .cog_config import config
 logger = logging.getLogger(__name__)
 
 
-def gamenight_increments(db_row, guild, host_id):
+def gamenight_increment(guild, host_id, db_row):
     point_thresholds = config["guilds"][str(guild.id)]["thresholds"]
 
     # Convert keys to ints (TOML makes them strings by default)
@@ -152,14 +152,16 @@ class GameNights(
 
         #  bulk update scores for users
         if (scores_cog := self.bot.get_cog("Scores")) is not None:
-            guild_increments = functools.partial(
-                gamenight_increments,
-                guild=channel.guild,
-                host_id=host_id,
+            guild_increment = functools.partial(
+                gamenight_increment,
+                channel.guild,
+                host_id,
             )
-            point_increments = filter(
-                lambda bonus: bonus is not None, map(guild_increments, participants)
-            )
+            point_increments = [
+                bonus
+                for participant in participants
+                if (bonus := guild_increment(participant)) is not None
+            ]
             await scores_cog.bulk_increment_scores(
                 channel.guild, point_increments, reason="Gamenight participation points"
             )
