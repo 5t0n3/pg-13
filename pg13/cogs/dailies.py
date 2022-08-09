@@ -157,26 +157,32 @@ class DailyBonuses(
                 interaction.guild_id,
             )
 
-        formatted_bonuses = []
-        for bonus in guild_dailies:
-            channel_mention = getattr(
-                interaction.guild.get_channel(bonus["channel"]),
-                "mention",
-                "<deleted channel>",
-            )
-            attachment_comment = (
-                " (picture/link required)" if bonus["attachment"] else ""
-            )
-            formatted_bonuses.append(
-                f"{channel_mention}: {bonus['points']} points{attachment_comment}"
+        if not guild_dailies:
+            await interaction.response.send_message(
+                "There aren't any daily channel bonuses in this server yet :), ephemeral=True"
             )
 
-        await interaction.response.send_message(
-            embed=discord.Embed(
-                title=f"{interaction.guild.name} Channel Bonuses",
-                description="\n".join(formatted_bonuses),
+        else:
+            formatted_bonuses = []
+            for bonus in guild_dailies:
+                channel_mention = getattr(
+                    interaction.guild.get_channel(bonus["channel"]),
+                    "mention",
+                    "<deleted channel>",
+                )
+                attachment_comment = (
+                    " (picture/link required)" if bonus["attachment"] else ""
+                )
+                formatted_bonuses.append(
+                    f"{channel_mention}: {bonus['points']} points{attachment_comment}"
+                )
+
+            await interaction.response.send_message(
+                embed=discord.Embed(
+                    title=f"{interaction.guild.name} Channel Bonuses",
+                    description="\n".join(formatted_bonuses),
+                )
             )
-        )
 
     @app_commands.command(
         name="clean-deleted",
@@ -196,9 +202,22 @@ class DailyBonuses(
                 if interaction.guild.get_channel(bonus["channel"]) is None
             ]
 
-            await con.execute(
+            delete_result = await con.execute(
                 "DELETE FROM channel_bonuses WHERE channel = ANY($1::BIGINT[])",
                 deleted_channels,
+            )
+
+        if int(delete_result.split(" ")[-1]) > 0:
+            await interaction.response.send_message(
+                "Cleaned up daily bonuses from deleted channels!", ephemeral=True
+            )
+            logger.debug(
+                f"Cleaned up daily bonuses from deleted channels in guild {interaction.guild.name}"
+            )
+        else:
+            await interaction.response.send_message(
+                "There were no bonuses from deleted channels to clean up :)",
+                ephemeral=True,
             )
 
     @commands.Cog.listener()
