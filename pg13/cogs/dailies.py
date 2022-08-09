@@ -159,7 +159,8 @@ class DailyBonuses(
 
         if not guild_dailies:
             await interaction.response.send_message(
-                "There aren't any daily channel bonuses in this server yet :), ephemeral=True"
+                "There aren't any daily channel bonuses in this server yet :)",
+                ephemeral=True,
             )
 
         else:
