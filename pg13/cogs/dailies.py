@@ -159,8 +159,10 @@ class DailyBonuses(
 
         formatted_bonuses = []
         for bonus in guild_dailies:
-            channel_mention = (
-                interaction.guild.get_channel(bonus["channel"]) or "<deleted channel>"
+            channel_mention = getattr(
+                interaction.guild.get_channel(bonus["channel"]),
+                "mention",
+                "<deleted channel>",
             )
             attachment_comment = (
                 " (picture/link required)" if bonus["attachment"] else ""
@@ -191,7 +193,7 @@ class DailyBonuses(
             deleted_channels = [
                 bonus["channel"]
                 for bonus in daily_channels
-                if interaction.guild.get(bonus["channel"]) is None
+                if interaction.guild.get_channel(bonus["channel"]) is None
             ]
 
             await con.execute(
