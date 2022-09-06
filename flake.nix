@@ -9,26 +9,22 @@
   };
 
   outputs = { self, nixpkgs, utils, discordpy-git }:
-    utils.lib.eachDefaultSystem (system:
+    utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pythonPkgs = pkgs.python310.pkgs;
-      in rec {
+        discordpy-dev = pythonPkgs.buildPythonPackage {
+          pname = "discord.py";
+          version = "2.0.0a";
+          src = discordpy-git;
+          doCheck = false;
+          propagatedBuildInputs = [ pythonPkgs.aiohttp ];
+        };
+      in {
         packages = {
-          discordpy-dev = pythonPkgs.buildPythonPackage {
-            pname = "discord.py";
-            version = "2.0.0a";
-            src = discordpy-git;
-
-            doCheck = false;
-
-            propagatedBuildInputs = [ pythonPkgs.aiohttp ];
-          };
-
           pg-13 = pythonPkgs.buildPythonPackage {
             pname = "pg13";
             version = "1.0.0";
-
             src = ./.;
 
             doCheck = false;
@@ -39,13 +35,14 @@
               asyncpg
               systemd
               toml
-              packages.discordpy-dev
+              discordpy-dev
             ];
           };
         };
 
-        devShells.default =
-          pkgs.mkShell { packages = [ packages.pg-13 pkgs.black ]; };
+        devShells.default = pkgs.mkShell {
+          packages = [ self.packages.${system}.pg-13 pkgs.black ];
+        };
 
         formatter = pkgs.nixfmt;
       }) // {
@@ -62,9 +59,8 @@
 
               configFile = mkOption {
                 type = with types; nullOr path;
-                default = null;
-                description =
-                  "The path to the PG-13 bot configuration (defaults to config.toml in the working directory).";
+                default = "/var/lib/pg-13/config.toml";
+                description = "The path to the PG-13 bot configuration.";
               };
             };
 
@@ -89,10 +85,8 @@
                   User = "pg-13";
                   WorkingDirectory = "/var/lib/pg-13";
                   ExecStart = "${self.packages.${pkgs.system}.pg-13}/bin/pg-13";
-                } // (if cfg.configFile != null then {
                   Environment = "CONFIG_PATH=${cfg.configFile}";
-                } else
-                  { });
+                };
               };
 
               services.postgresql = {
@@ -107,7 +101,5 @@
               };
             };
           };
-
-        nixosModule = self.nixosModules.default;
       };
 }
