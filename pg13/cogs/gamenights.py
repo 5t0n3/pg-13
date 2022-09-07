@@ -8,7 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from .cog_config import config
+from ..config import thresholds
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ Participant = collections.namedtuple("Participant", ["member", "minutes", "forma
 
 
 def gamenight_increment(guild, host_id, participant):
-    point_thresholds = config["guilds"][str(guild.id)]["thresholds"]
+    point_thresholds = thresholds[guild.id]
 
     # Convert keys to ints (TOML makes them strings by default)
     point_thresholds = {
@@ -189,7 +189,7 @@ class GameNights(
     async def gamenight_host(
         self, interaction: discord.Interaction, host: discord.Member = None
     ):
-        if config["guilds"][str(interaction.guild_id)].get("thresholds") is None:
+        if interaction.guild_id not in thresholds:
             logger.warn(
                 f"Attempted to start game night in unconfigured guild {interaction.guild.name}"
             )

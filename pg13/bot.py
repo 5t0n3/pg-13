@@ -1,60 +1,17 @@
 import logging
-import pathlib
 
 import asyncpg
 import discord
 from discord import app_commands
 from discord.ext import commands
-import toml
+        
+from .config import token, prefix
 
 logger = logging.getLogger(__name__)
 
 
-class PG13Bot(commands.Bot):
-    def __init__(self, config_path):
-        # Load TOML configuration
-        config = toml.load(config_path)
-        self.guild_configs = config["guilds"]
-        self._token = config["token"]
-
-        # Initialize discord.py side of bot
-        bot_intents = discord.Intents(
-            guild_messages=True,
-            voice_states=True,
-            guilds=True,
-            members=True,
-            message_content=True,
-        )
-        super().__init__(
-            command_prefix=config["prefix"], intents=bot_intents, help_command=None
-        )
-
-        # Set up slash command error handler
-        self.tree.on_error = self.handle_command_error
-
-    def run(self):
-        super().run(self._token, log_handler=None)
-
-    async def setup_hook(self):
-        self.db_pool = await asyncpg.create_pool(database="pg_13", user="pg-13")
-
-        cog_list = [
-            "pg13.cogs.scores",
-            "pg13.cogs.dailies",
-            "pg13.cogs.gamenights",
-            "pg13.cogs.bonus_roles",
-            "pg13.cogs.utilities",
-        ]
-
-        for cog in cog_list:
-            await self.load_extension(cog)
-
-    async def on_ready(self):
-        await self.update_presence()
-
-        logger.info("Now running!")
-
-    async def handle_command_error(
+class PG13Tree(discord.app_commands.CommandTree):
+    async def on_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ):
         if isinstance(error, app_commands.CheckFailure):
@@ -72,8 +29,44 @@ class PG13Bot(commands.Bot):
                 exc_info=error,
             )
 
-    async def update_presence(self):
+
+class PG13Bot(commands.Bot):
+    def __init__(self):
+        bot_intents = discord.Intents(
+            guild_messages=True,
+            voice_states=True,
+            guilds=True,
+            members=True,
+            message_content=True,
+        )
+        super().__init__(
+            command_prefix=prefix,
+            tree_cls=PG13Tree,
+            help_command=None,
+            intents=bot_intents,
+        )
+
+    def run(self):
+        super().run(token, log_handler=None)
+
+    async def setup_hook(self):
+        self.db_pool = await asyncpg.create_pool(database="pg_13", user="pg-13")
+
+        cog_list = [
+            "pg13.cogs.scores",
+            "pg13.cogs.dailies",
+            "pg13.cogs.gamenights",
+            "pg13.cogs.bonus_roles",
+            "pg13.cogs.utilities",
+        ]
+
+        for cog in cog_list:
+            await self.load_extension(cog)
+
+    async def on_ready(self):
         bot_presence = discord.Activity(
             name="your every mov(i)e :)", type=discord.ActivityType.watching
         )
         await self.change_presence(activity=bot_presence, status=discord.Status.idle)
+
+        logger.info(f"Now running as {self.user.name}#{self.user.discriminator}!")
