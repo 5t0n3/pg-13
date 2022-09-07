@@ -6,6 +6,8 @@ from zoneinfo import ZoneInfo
 
 from discord.ext import commands, tasks
 
+from ..config import door_members
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +39,7 @@ class DoorToDarkness(commands.Cog):
             return
 
         # Fetch guild's specific member that has to be mentioned
-        mention_id = self.bot.guild_configs[str(message.guild.id)].get("door_member")
+        mention_id = door_members[message.guild.id]
         if mention_id is None:
             logger.debug(f"No door user configured for guild f{message.guild.name}")
             return
