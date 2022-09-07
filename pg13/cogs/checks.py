@@ -1,15 +1,11 @@
-import os
-
 import discord
-import toml
 
-config_path = os.environ.get("CONFIG_PATH") or "config.toml"
-config = toml.load(config_path)
+from ..config import admins
 
-# Admin roles/users are configured in config.toml as well
+
 async def admin_check(interaction: discord.Interaction):
     """Returns true if the user attempting to use a command is a bot admin"""
-    guild_admins = config["guilds"][str(interaction.guild_id)]["admins"]
+    guild_admins = admins[interaction.guild_id]
 
     return interaction.user.id in guild_admins["users"] or not set(
         map(lambda role: role.id, interaction.user.roles)

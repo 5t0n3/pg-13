@@ -3,6 +3,8 @@ import logging
 
 from discord.ext import commands
 
+from ..config import bonus_roles
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,12 +24,11 @@ class BonusRoles(commands.Cog):
 
     async def update_bonus_roles(self, guild):
         # Fetch guild's bonus role from config
-        bonus_id = self.bot.guild_configs[str(guild.id)].get("bonus_role")
-        if bonus_id is None:
+        if guild.id not in bonus_roles:
             logger.warn(f"Guild {guild.name} doesn't have a bonus role configured")
             return
 
-        bonus_id = int(bonus_id)
+        bonus_id = bonus_roles[guild.id]
 
         # Fetch role object to ensure it exists
         if (bonus_role := guild.get_role(bonus_id)) is None:
