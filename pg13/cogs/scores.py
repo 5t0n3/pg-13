@@ -189,7 +189,6 @@ class Scores(commands.Cog):
     async def increment_score(self, member, points, reason=None):
         await self.bulk_increment_scores(member.guild, [(member.id, points)], reason)
 
-    # TODO: add a reason parameter for logging purposes
     async def bulk_increment_scores(self, guild, increments, reason=None):
         """Changes a user's score by some amount"""
         async with self.db_pool.acquire() as con:

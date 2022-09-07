@@ -1,3 +1,4 @@
+import collections
 import datetime
 import functools
 import logging
@@ -11,8 +12,10 @@ from .cog_config import config
 
 logger = logging.getLogger(__name__)
 
+Participant = collections.namedtuple("Participant", ["member", "minutes", "formatted"])
 
-def gamenight_increment(guild, host_id, db_row):
+
+def gamenight_increment(guild, host_id, participant):
     point_thresholds = config["guilds"][str(guild.id)]["thresholds"]
 
     # Convert keys to ints (TOML makes them strings by default)
@@ -22,7 +25,7 @@ def gamenight_increment(guild, host_id, db_row):
 
     point_duration = max(
         filter(
-            lambda threshold: threshold <= db_row["minutes"],
+            lambda threshold: threshold <= participant.minutes,
             point_thresholds,
         ),
         default=0,
@@ -30,24 +33,20 @@ def gamenight_increment(guild, host_id, db_row):
     participation_points = point_thresholds.get(point_duration)
 
     if participation_points is not None:
-        points = participation_points + (17 if db_row["userid"] == host_id else 0)
-        return (db_row["userid"], points)
+        points = participation_points + (17 if participant.member.id == host_id else 0)
+        return (participant.member.id, points)
     else:
         return None
 
 
 def leaderboard_entry(base_str, member_info, guild, host_id):
     place = member_info[0]
-    log_row = member_info[1]
+    participant = member_info[1]
 
-    member = guild.get_member(log_row["userid"])
-    if member is None:
-        return base_str
-
-    host_string = " (host)" if member.id == host_id else ""
+    host_string = " (host)" if participant.member.id == host_id else ""
 
     return (
-        base_str + f"{place}{host_string} - {member.mention} ({log_row['formatted']})\n"
+        base_str + f"{place}{host_string} - {participant.member.mention} ({participant.formatted})\n"
     )
 
 
@@ -81,8 +80,8 @@ class GameNights(
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        # Ignore if a user is a bot or only mutes/deafens
-        if member.bot or before.channel == after.channel:
+        # Ignore if a user only mutes/deafens
+        if before.channel == after.channel:
             return
 
         # Check if user's current/previous voice channel had ongoing game night(s)
@@ -113,7 +112,7 @@ class GameNights(
         # in db:
         async with self.db_pool.acquire() as con:
             #  get game night info (error if ending nonexistent?)
-            gamenight_info = await con.fetch(
+            gamenight_info = await con.fetchrow(
                 "SELECT start_channel, host FROM gamenights WHERE voice_channel = $1 AND guild = $2",
                 channel.id,
                 channel.guild.id,
@@ -137,7 +136,15 @@ class GameNights(
             )
             return
 
-        host_id = gamenight_info[0]["host"]
+        host_id = gamenight_info["host"]
+
+        # filter users who left & bots out of gamenight participants
+        participants = [
+            Participant(member, row["minutes"], row["formatted"])
+            for row in participants
+            if (member := channel.guild.get_member(row["userid"])) is not None
+            and not member.bot
+        ]
 
         # outside db:
         #  enumerate users based on duration
@@ -166,7 +173,7 @@ class GameNights(
                 channel.guild, point_increments, reason="Gamenight participation points"
             )
 
-        summary_channel = channel.guild.get_channel(gamenight_info[0]["start_channel"])
+        summary_channel = channel.guild.get_channel(gamenight_info["start_channel"])
         await summary_channel.send(
             embed=discord.Embed(
                 title=f"Game night summary - {channel.name}",
