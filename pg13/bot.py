@@ -4,7 +4,7 @@ import asyncpg
 import discord
 from discord import app_commands
 from discord.ext import commands
-        
+
 from .config import token, prefix
 
 logger = logging.getLogger(__name__)

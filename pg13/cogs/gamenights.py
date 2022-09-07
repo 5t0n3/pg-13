@@ -46,7 +46,8 @@ def leaderboard_entry(base_str, member_info, guild, host_id):
     host_string = " (host)" if participant.member.id == host_id else ""
 
     return (
-        base_str + f"{place}{host_string} - {participant.member.mention} ({participant.formatted})\n"
+        base_str
+        + f"{place}{host_string} - {participant.member.mention} ({participant.formatted})\n"
     )
 
 
