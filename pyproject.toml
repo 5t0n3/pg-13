@@ -1,16 +1,21 @@
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
-[project]
+[tool.poetry]
 name = "pg13"
 version = "1.0.0"
-dependencies = [
-  "aiosqlite",
-  "asyncpg",
-  "discord.py",
-  "toml"
-]
+description = "A needlessly complicated point system bot for Discord."
+authors = ["Zane Othman-Gomez <zane.othman@gmail.com>"]
+license = "ISC"
 
-[project.scripts]
+[tool.poetry.dependencies]
+python = "^3.10"
+aiosqlite = "^0.17.0"
+asyncpg = "^0.26.0"
+"discord.py" = { git = "https://github.com/Rapptz/discord.py" }
+systemd-python = "^234"
+toml = "^0.10.2"
+
+[tool.poetry.scripts]
 pg-13 = "pg13:run_bot"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

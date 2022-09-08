@@ -2,43 +2,14 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
-    discordpy-git = {
-      url = "github:Rapptz/discord.py";
-      flake = false;
-    };
   };
 
-  outputs = { self, nixpkgs, utils, discordpy-git }:
+  outputs = { self, nixpkgs, utils }:
     utils.lib.eachSystem [ "x86_64-linux" ] (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        pythonPkgs = pkgs.python310.pkgs;
-        discordpy-dev = pythonPkgs.buildPythonPackage {
-          pname = "discord.py";
-          version = "2.0.0a";
-          src = discordpy-git;
-          doCheck = false;
-          propagatedBuildInputs = [ pythonPkgs.aiohttp ];
-        };
+      let pkgs = nixpkgs.legacyPackages.${system};
       in {
-        packages = {
-          pg-13 = pythonPkgs.buildPythonPackage {
-            pname = "pg13";
-            version = "1.0.0";
-            src = ./.;
-
-            doCheck = false;
-
-            buildInputs = with pythonPkgs; [ typing-extensions ];
-            propagatedBuildInputs = with pythonPkgs; [
-              aiosqlite
-              asyncpg
-              systemd
-              toml
-              discordpy-dev
-            ];
-          };
-        };
+        packages.pg-13 =
+          pkgs.poetry2nix.mkPoetryApplication { projectDir = ./.; };
 
         devShells.default = pkgs.mkShell {
           packages = [ self.packages.${system}.pg-13 pkgs.black ];
