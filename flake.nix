@@ -8,8 +8,10 @@
     utils.lib.eachSystem [ "x86_64-linux" ] (system:
       let pkgs = nixpkgs.legacyPackages.${system};
       in {
-        packages.pg-13 =
-          pkgs.poetry2nix.mkPoetryApplication { projectDir = ./.; };
+        packages.pg-13 = pkgs.poetry2nix.mkPoetryApplication {
+          projectDir = ./.;
+          python = pkgs.python310;
+        };
 
         devShells.default = pkgs.mkShell {
           packages = [ self.packages.${system}.pg-13 pkgs.black ];
