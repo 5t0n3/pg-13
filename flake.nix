@@ -58,7 +58,7 @@
               };
 
               configFile = mkOption {
-                type = with types; nullOr path;
+                type = types.path;
                 default = "/var/lib/pg-13/config.toml";
                 description = "The path to the PG-13 bot configuration.";
               };
