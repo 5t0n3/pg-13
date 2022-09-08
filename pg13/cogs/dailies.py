@@ -254,8 +254,8 @@ class DailyBonuses(
     @tasks.loop(time=datetime.time(23, 58, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def clear_daily_claims(self):
         async with self.db_pool.acquire() as con:
-            await con.execute("DELETE FROM channel_claims")
-            await con.execute("DELETE FROM daily_claims")
+            await con.execute("TRUNCATE TABLE channel_claims")
+            await con.execute("TRUNCATE TABLE daily_claims")
 
         logger.debug("Cleared all daily reward tables")
 

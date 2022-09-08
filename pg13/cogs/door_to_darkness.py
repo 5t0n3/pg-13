@@ -80,7 +80,7 @@ class DoorToDarkness(commands.Cog):
     @tasks.loop(time=datetime.time(11, 57, 0, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def clear_door_claims(self):
         async with self.db_pool.acquire() as con:
-            await con.execute(f"DELETE FROM door_claims")
+            await con.execute(f"TRUNCATE TABLE door_claims")
 
 
 async def setup(bot):
