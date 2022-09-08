@@ -1,21 +1,5 @@
 {
   "nodes": {
-    "discordpy-git": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1662302539,
-        "narHash": "sha256-UwscEYHU236uV3bxtGSjMmtPxYrxWO/Tfha4rr5xojM=",
-        "owner": "Rapptz",
-        "repo": "discord.py",
-        "rev": "e8f6b29a2da83829f3f8708c28cdd4bb24af2ea4",
-        "type": "github"
-      },
-      "original": {
-        "owner": "Rapptz",
-        "repo": "discord.py",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1662019588,
@@ -34,7 +18,6 @@
     },
     "root": {
       "inputs": {
-        "discordpy-git": "discordpy-git",
         "nixpkgs": "nixpkgs",
         "utils": "utils"
       }
