@@ -1,10 +1,23 @@
 # PG-13
 
+[![built with nix](https://builtwithnix.org/badge.svg)](https://builtwithnix.org)
+
+A Discord bot that keeps track of points from a variety of sources.
+
 I don't expect this to be useful to anyone, but hey, if it is that's great :)
 
-## Functionality
+## Features
 
-TODO
+- **Score tracking** through server-specific leaderboards
+- **Manual score management** when you want to ~~punish your enemies~~ reward
+  specific users
+- **Assignment of special roles** to the users with the most points
+- **Daily point rewards** for both messages in configurable text channels and
+  via a command
+- **Game nights** with points awarded based on how long someone stays in a call
+  for
+- Something about the [**Door to Darkness**](pg13/cogs/door_to_darkness.py), if
+  you so desire :)
 
 ## Installation
 
