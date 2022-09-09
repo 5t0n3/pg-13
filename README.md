@@ -19,9 +19,9 @@ Just add the following to your system configuration flake:
 
 ```nix
 {
-  inputs.pg-13.url = github:5t0n3/pg-13;
+  inputs.pg-13.url = "github:5t0n3/pg-13";
 
-  outputs = { self, nixpkgs, pg-13 }:
+  outputs = { self, nixpkgs, pg-13 }: {
     nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
       system = "<your system/architecture>";
       modules = [
