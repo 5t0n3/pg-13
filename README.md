@@ -19,12 +19,20 @@ I don't expect this to be useful to anyone, but hey, if it is that's great :)
 - Something about the [**Door to Darkness**](pg13/cogs/door_to_darkness.py), if
   you so desire :)
 
-## Installation
+## Configuration
+
+An [example configuration](config.example.toml) is provided in this repository
+which shows the structure that PG-13 expects when running. If you are running
+PG-13 outside of your system configuration via the supplied module, it expects a
+`config.toml` file in the working directory, or wherever the `CONFIG_PATH`
+environment variable points to, if applicable.
 
 If you're using NixOS, something like [agenix](https://github.com/ryantm/agenix)
 can be useful for managing your PG-13 configuration. Just set
 `services.pg-13.configFile` to be the `path` attribute of the corresponding
 secret.
+
+## Installation
 
 ### NixOS with flakes (recommended)
 
@@ -32,7 +40,8 @@ Just add the following to your system configuration flake:
 
 ```nix
 {
-  inputs.pg-13.url = "github:5t0n3/pg-13";
+  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-<channel>";
+  inputs.pg-13.url = "github:5t0n3/pg-13/v1.0.0";
 
   outputs = { self, nixpkgs, pg-13 }: {
     nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
@@ -44,7 +53,7 @@ Just add the following to your system configuration flake:
 
           # optional but recommended
           # (defaults to /var/lib/pg-13/config.toml)
-          # services.pg-13.configFile = <path/to/your/config.toml>;
+          # services.pg-13.configFile = "<path/to/your/config.toml>";
         })
       ];
     };
@@ -63,7 +72,7 @@ let
     owner = "5t0n3";
     repo = "pg-13";
     rev = "v1.0.0"; # or a commit hash
-    sha256 = "<repository hash>"; # obtained using nix-prefetch-url
+    sha256 = "<hash>"; # obtained using nix-prefetch-url
   });
 in {
   imports = [ pg-13.nixosModules.default ];
@@ -78,19 +87,44 @@ in {
 
 You can probably also add this repository as a channel, if you'd like.
 
-### Other operating systems
+### Nix on non-NixOS systems
+
+If you have a flakes-capable Nix on top of another (Linux) operating system,
+installation of PG-13 is still pretty easy (assuming your OS uses systemd):
+
+```
+$ nix profile install github:5t0n3/pg-13/v1.0.0#pg-13
+```
+
+Without a flakes-capable Nix, you should be able to clone this repository and
+run the following to achieve the same effect:
+
+```
+$ nix-env -f https://github.com/5t0n3/pg-13/tarball/v1.0.0 -iA packages.<your system>.pg-13
+```
+
+In both cases, you will have to install and set up PostgreSQL separately, but
+Nix manages all of PG-13's Python dependencies for you.
+
+### Other operating systems (no Nix)
 
 You'll need to install a few things in order to get PG-13 running on other
-operating systems, namely PostgreSQL, Python (3.10+), and
-[poetry](https://python-poetry.org/), a Python package manager. PG-13 also
-depends on systemd, so if your operating system doesn't use it then you're out
-of luck unfortunately. There might also be a couple more things to install, but
-given that I use NixOS I don't know what they might be :)
+operating systems. Installing and setting them up is outside of the scope of
+this project, but plenty of guides should be available online.
 
-On the Postgres side, PG-13 expects the `pg_13` database to exist and to have
-all privileges in modifying it. When running the bot itself, the bot
-configuration should either be placed in `config.toml` in the working directory
-or supplied via the `CONFIG_PATH` environment variable. I'd recommend running
-PG-13 as a systemd service, as that way you don't have to worry about manually
-starting it up whenever the computer it's running on is restarted. You can look
-at flake.nix for a good starting point for doing this.
+- **Python** - I've only tested with Python 3.9 and 3.10, but other versions
+  could work
+- [**poetry**](https://python-poetry.org/) - used for Python dependency
+  management
+- **PostgreSQL** - this bot expects database `pg_13` to exist as well as the
+  user `pg-13` with full privileges to it
+- **systemd** - used for logging (via journald); I recommend running the bot
+  with a systemd service
+
+After ensuring all of these are installed and set up properly and
+[configuring the bot](#configuration), you should be able to run this bot using
+the command from wherever you cloned this repository to:
+
+```
+$ poetry run pg-13
+```
