@@ -2,10 +2,15 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, utils }:
-    utils.lib.eachSystem [ "x86_64-linux" ] (system:
+  outputs = { self, nixpkgs, utils, flake-compat }:
+    utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" "i686-linux" ]
+    (system:
       let pkgs = nixpkgs.legacyPackages.${system};
       in {
         packages.pg-13 = pkgs.poetry2nix.mkPoetryApplication {
