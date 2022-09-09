@@ -1,4 +1,4 @@
-# PG-13 - the Discord point bot you'll never need
+# PG-13
 
 I don't expect this to be useful to anyone, but hey, if it is that's great :)
 
