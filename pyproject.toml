@@ -3,7 +3,7 @@ name = "pg13"
 version = "1.0.0"
 description = "A needlessly complicated point system bot for Discord."
 authors = ["Zane Othman-Gomez <zane.othman@gmail.com>"]
-license = "ISC"
+license = "Apache-2.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
