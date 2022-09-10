@@ -21,9 +21,9 @@ I don't expect this to be useful to anyone, but hey, if it is that's great :)
 
 ## Configuration
 
-An [example configuration](config.example.toml) is provided in this repository
+An [example configuration](config.example.toml) is included in this repository
 which shows the structure that PG-13 expects when running. If you are running
-PG-13 outside of your system configuration via the supplied module, it expects a
+PG-13 without using the supplied NixOS module options, it expects a
 `config.toml` file in the working directory, or wherever the `CONFIG_PATH`
 environment variable points to, if applicable.
 
@@ -87,33 +87,33 @@ in {
 
 You can probably also add this repository as a channel, if you'd like.
 
-### Nix on non-NixOS systems
+### Nix on other Linux distributions
 
-If you have a flakes-capable Nix on top of another (Linux) operating system,
-installation of PG-13 is still pretty easy (assuming your OS uses systemd):
+If you have a flakes-capable Nix on top of another Linux flavor, installation of
+PG-13 is still pretty easy:
 
 ```
 $ nix profile install github:5t0n3/pg-13/v1.0.0#pg-13
 ```
 
-Without a flakes-capable Nix, you should be able to clone this repository and
-run the following to achieve the same effect:
+Without a flakes-capable Nix, you should be able to run the following to achieve
+the same effect:
 
 ```
 $ nix-env -f https://github.com/5t0n3/pg-13/tarball/v1.0.0 -iA packages.<your system>.pg-13
 ```
 
-In both cases, you will have to install and set up PostgreSQL separately, but
-Nix manages all of PG-13's Python dependencies for you.
+In both cases, you will have to install and set up PostgreSQL and systemd
+separately, but Nix will manages all of PG-13's Python dependencies for you.
 
-### Other operating systems (no Nix)
+### Other operating systems (without Nix)
 
 You'll need to install a few things in order to get PG-13 running on other
-operating systems. Installing and setting them up is outside of the scope of
-this project, but plenty of guides should be available online.
+operating systems. Plenty of guides should be available online should you need
+them.
 
-- **Python** - I've only tested with Python 3.9 and 3.10, but other versions
-  could work
+- **Python** - I've only tested PG-13 with Python 3.9 and 3.10, but other
+  versions could work
 - [**poetry**](https://python-poetry.org/) - used for Python dependency
   management
 - **PostgreSQL** - this bot expects database `pg_13` to exist as well as the
@@ -123,7 +123,7 @@ this project, but plenty of guides should be available online.
 
 After ensuring all of these are installed and set up properly and
 [configuring the bot](#configuration), you should be able to run this bot using
-the command from wherever you cloned this repository to:
+the following command from wherever you cloned this repository to:
 
 ```
 $ poetry run pg-13
