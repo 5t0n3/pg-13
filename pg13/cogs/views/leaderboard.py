@@ -86,6 +86,9 @@ class Leaderboard(discord.ui.View):
         )
         await interaction.response.send_message(embed=leaderboard_embed, view=self)
 
+        # Store a reference to the leaderboard message for cleanup purposes
+        self.message = await interaction.original_response()
+
     async def update(self, interaction):
         self.leaderboard_left.disabled = self.offsets[self.page] == 0
         self.leaderboard_right.disabled = len(self.next_users) == 0
@@ -99,6 +102,12 @@ class Leaderboard(discord.ui.View):
             title=f"{self.guild.name} Leaderboard", description=leaderboard
         )
         await interaction.response.edit_message(embed=leaderboard_embed, view=self)
+
+    async def on_timeout(self):
+        # Disable the buttons after the leaderboard expires
+        self.leaderboard_left.disabled = True
+        self.leaderboard_right.disabled = True
+        await self.message.edit(view=self)
 
     @discord.ui.button(emoji="⬅️", custom_id="leaderboard:left", disabled=True)
     async def leaderboard_left(
