@@ -8,3 +8,6 @@ config.toml
 # Bot-generated files
 *.db
 *.log
+
+# direnv
+.direnv/
