@@ -41,7 +41,7 @@ Just add the following to your system configuration flake:
 ```nix
 {
   inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-<channel>";
-  inputs.pg-13.url = "github:5t0n3/pg-13/v1.0.0";
+  inputs.pg-13.url = "github:5t0n3/pg-13/v1.1.0";
 
   outputs = { self, nixpkgs, pg-13 }: {
     nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
@@ -71,7 +71,7 @@ let
   pg-13 = import (pkgs.fetchFromGitHub {
     owner = "5t0n3";
     repo = "pg-13";
-    rev = "v1.0.0"; # or a commit hash
+    rev = "v1.1.0"; # or a commit hash
     sha256 = "<hash>"; # obtained using nix-prefetch-url
   });
 in {
@@ -93,14 +93,14 @@ If you have a flakes-capable Nix on top of another Linux flavor, installation of
 PG-13 is still pretty easy:
 
 ```
-$ nix profile install github:5t0n3/pg-13/v1.0.0#pg-13
+$ nix profile install github:5t0n3/pg-13/v1.1.0#pg-13
 ```
 
 Without a flakes-capable Nix, you should be able to run the following to achieve
 the same effect:
 
 ```
-$ nix-env -f https://github.com/5t0n3/pg-13/tarball/v1.0.0 -iA packages.<your system>.pg-13
+$ nix-env -f https://github.com/5t0n3/pg-13/tarball/v1.1.0 -iA packages.<your system>.pg-13
 ```
 
 In both cases, you will have to install and set up PostgreSQL and systemd
