@@ -67,7 +67,8 @@ class DailyBonuses(
             # Give user points if they haven't claimed it
             if (scores_cog := self.bot.get_cog("Scores")) is not None:
                 await scores_cog.increment_score(
-                    interaction.user, 3, "Claimed daily reward"
+                    # HOLIDAY MULTIPLIER
+                    interaction.user, 3 * 3, "Claimed daily reward"
                 )
 
             await interaction.response.send_message(
@@ -247,7 +248,8 @@ class DailyBonuses(
         ):
             await scores_cog.increment_score(
                 message.author,
-                bonus_points,
+                # HOLIDAY MULTIPLIER
+                bonus_points * 3,
                 reason=f"Bonus claim in #{message.channel.name}",
             )
 
