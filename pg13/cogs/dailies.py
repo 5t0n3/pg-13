@@ -69,7 +69,9 @@ class DailyBonuses(
             if (scores_cog := self.bot.get_cog("Scores")) is not None:
                 await scores_cog.increment_score(
                     # HOLIDAY MULTIPLIER
-                    interaction.user, daily_points[interaction.guild_id] * 3, "Claimed daily reward"
+                    interaction.user,
+                    daily_points[interaction.guild_id] * 3,
+                    "Claimed daily reward",
                 )
 
             await interaction.response.send_message(
