@@ -8,6 +8,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from .checks import admin_check
+from ..config import daily_points
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ class DailyBonuses(
             if (scores_cog := self.bot.get_cog("Scores")) is not None:
                 await scores_cog.increment_score(
                     # HOLIDAY MULTIPLIER
-                    interaction.user, 3 * 3, "Claimed daily reward"
+                    interaction.user, daily_points[interaction.guild_id] * 3, "Claimed daily reward"
                 )
 
             await interaction.response.send_message(

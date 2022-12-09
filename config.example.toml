@@ -8,6 +8,7 @@ prefix = "[your prefix here]"
 # [guilds.guild_id]
 # thresholds = { minutes = points, ... }
 # bonus_role = [your bonus role id]
+# daily_points = [points]
 # door_member = [member id]
 
 # [guilds.guild_id.admins]

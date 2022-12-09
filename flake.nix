@@ -20,7 +20,7 @@
     in {
       packages.pg-13 = pkgs.poetry2nix.mkPoetryApplication {
         projectDir = ./.;
-        python = pkgs.python310Full;
+        python = pkgs.python310;
 
         # TODO: figure out why this broke
         overrides = [

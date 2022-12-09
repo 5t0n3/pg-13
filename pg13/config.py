@@ -14,6 +14,7 @@ thresholds = {}
 bonus_roles = {}
 admins = {}
 door_members = {}
+daily_points = {}
 
 for guild_id, config in _config["guilds"].items():
     guild_id = int(guild_id)
@@ -21,4 +22,5 @@ for guild_id, config in _config["guilds"].items():
     thresholds[guild_id] = config["thresholds"]
     bonus_roles[guild_id] = config["bonus_role"]
     admins[guild_id] = config["admins"]
+    daily_points[guild_id] = config["daily_points"]
     door_members[guild_id] = config["door_member"]
