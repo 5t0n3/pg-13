@@ -195,6 +195,10 @@ class Leaderboard(discord.ui.View):
                 raw_next_bundles = raw_bundled[total_complement:]
 
             else:
+                # this has to be done before fetching the next users since otherwise self.next_offset
+                # results in indexing out of bounds (I think)
+                self.offsets.append(self.current_offset + self.lookahead_length)
+
                 async with self.db_pool.acquire() as con:
                     unbundled_next = await con.fetch(
                         "SELECT userid, score FROM scores WHERE guild = $1 "
@@ -208,7 +212,6 @@ class Leaderboard(discord.ui.View):
                     for row in unbundled_next
                 ]
 
-                self.offsets.append(self.current_offset + self.lookahead_length)
 
             # Fetch (some of) the users to be displayed on the next page
             valid_next, lookahead = calculate_offset(raw_next_bundles, 15)
