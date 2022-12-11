@@ -20,7 +20,7 @@ for guild_id, config in _config["guilds"].items():
     guild_id = int(guild_id)
 
     thresholds[guild_id] = config["thresholds"]
-    bonus_roles[guild_id] = config["bonus_role"]
+    bonus_roles[guild_id] = config.get("bonus_role")
     admins[guild_id] = config["admins"]
     daily_points[guild_id] = config["daily_points"]
-    door_members[guild_id] = config["door_member"]
+    door_members[guild_id] = config.get("door_member")

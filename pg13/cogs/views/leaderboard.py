@@ -212,7 +212,6 @@ class Leaderboard(discord.ui.View):
                     for row in unbundled_next
                 ]
 
-
             # Fetch (some of) the users to be displayed on the next page
             valid_next, lookahead = calculate_offset(raw_next_bundles, 15)
             self.next_users = valid_next

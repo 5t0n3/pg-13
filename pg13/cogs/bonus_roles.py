@@ -24,11 +24,9 @@ class BonusRoles(commands.Cog):
 
     async def update_bonus_roles(self, guild):
         # Fetch guild's bonus role from config
-        if guild.id not in bonus_roles:
-            logger.warn(f"Guild {guild.name} doesn't have a bonus role configured")
+        if (bonus_id := bonus_roles.get(guild.id)) is None:
+            logger.debug(f"Guild {guild.name} doesn't have a bonus role configured")
             return
-
-        bonus_id = bonus_roles[guild.id]
 
         # Fetch role object to ensure it exists
         if (bonus_role := guild.get_role(bonus_id)) is None:
