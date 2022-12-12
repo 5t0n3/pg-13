@@ -58,6 +58,7 @@ class PG13Bot(commands.Bot):
             "pg13.cogs.gamenights",
             "pg13.cogs.bonus_roles",
             "pg13.cogs.utilities",
+            "pg13.cogs.picture_8ball",
         ]
 
         for cog in cog_list:
