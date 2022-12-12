@@ -10,17 +10,16 @@ logger = logging.getLogger(__name__)
 
 
 class Picture8Ball(commands.Cog):
-    @app_commands.command(
+    @commands.command(
         name="ask", description="Receive an answer from the almighty oracle (me)."
     )
-    @app_commands.describe(question="The question you require an answer to")
-    async def ask(self, interaction: discord.Interaction, question: str):
-        response_dir = pathlib.Path(f"8ball/{interaction.guild_id}")
+    async def ask(self, ctx: commands.Context):
+        response_dir = pathlib.Path(f"8ball/{ctx.guild.id}")
 
         if not response_dir.is_dir():
-            await interaction.response.send_message(
+            await ctx.reply(
                 "I'm not configured to answer your questions in this server silly :)",
-                ephemeral=True,
+                mention_author=False,
             )
             return
 
@@ -28,7 +27,10 @@ class Picture8Ball(commands.Cog):
         random_response = random.choice(responses)
 
         with open(random_response, "rb") as resp:
-            await interaction.response.send_message(file=discord.File(resp))
+            await ctx.reply(
+                file=discord.File(resp, filename=random_response.name),
+                mention_author=False,
+            )
 
 
 async def setup(bot):
