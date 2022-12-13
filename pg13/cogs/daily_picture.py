@@ -18,7 +18,7 @@ class DailyPicture(commands.Cog):
         self.bot = bot
 
     # TODO: change to non-test time
-    @tasks.loop(time=datetime.time(16, 25, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(16, 35, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def send_pictures(self):
         for guild_id, channel_id in picture_channels:
             if (guild := self.bot.get_guild(guild_id)) is None:
