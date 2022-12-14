@@ -17,8 +17,12 @@ class DailyPicture(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.Cog.listener()
+    async def on_ready():
+        self.send_pictures.start()
+
     # TODO: change to non-test time
-    @tasks.loop(time=datetime.time(15, 17, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(15, 23, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def send_pictures(self):
         logger.debug(f"picture_channels -> {picture_channels}")
         for guild_id, channel_id in picture_channels.items():
