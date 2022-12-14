@@ -22,7 +22,7 @@ class DailyPicture(commands.Cog):
         self.send_pictures.start()
 
     # TODO: change to non-test time
-    @tasks.loop(time=datetime.time(15, 24, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(15, 29, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def send_pictures(self):
         logger.debug(f"picture_channels -> {picture_channels}")
         for guild_id, channel_id in picture_channels.items():
