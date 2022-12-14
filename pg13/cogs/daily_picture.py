@@ -18,7 +18,7 @@ class DailyPicture(commands.Cog):
         self.bot = bot
 
     # TODO: change to non-test time
-    @tasks.loop(time=datetime.time(16, 35, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(15, 10, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def send_pictures(self):
         for guild_id, channel_id in picture_channels:
             if (guild := self.bot.get_guild(guild_id)) is None:
@@ -41,9 +41,11 @@ class DailyPicture(commands.Cog):
                     random_picture = random.choice(responses)
 
                     with open(random_picture, "rb") as picture:
-                        await ctx.send(
+                        await picture_channel.send(
                             file=discord.File(picture, filename=random_picture.name),
                         )
+                    
+                    logger.debug(f"Sent picture in guild {guild.name} (channel #{channel.name})")
 
 
 async def setup(bot):
