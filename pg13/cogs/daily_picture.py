@@ -22,9 +22,8 @@ class DailyPicture(commands.Cog):
         self.send_pictures.start()
 
     # TODO: change to non-test time
-    @tasks.loop(time=datetime.time(15, 29, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(15, 32, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def send_pictures(self):
-        logger.debug(f"picture_channels -> {picture_channels}")
         for guild_id, channel_id in picture_channels.items():
             if (guild := self.bot.get_guild(guild_id)) is None:
                 logger.warn(f"Unable to fetch guild {guild_id}")
@@ -41,9 +40,9 @@ class DailyPicture(commands.Cog):
                     )
 
                 else:
-                    # recursively glob for files (i.e. not directories)
+                    # recursively glob for (picture) files (i.e. not directories)
                     pictures = list(picture_dir.rglob("*.*"))
-                    random_picture = random.choice(responses)
+                    random_picture = random.choice(pictures)
 
                     with open(random_picture, "rb") as picture:
                         await picture_channel.send(
