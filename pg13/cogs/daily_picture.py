@@ -18,9 +18,10 @@ class DailyPicture(commands.Cog):
         self.bot = bot
 
     # TODO: change to non-test time
-    @tasks.loop(time=datetime.time(15, 10, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(15, 17, tzinfo=ZoneInfo("America/Los_Angeles")))
     async def send_pictures(self):
-        for guild_id, channel_id in picture_channels:
+        logger.debug(f"picture_channels -> {picture_channels}")
+        for guild_id, channel_id in picture_channels.items():
             if (guild := self.bot.get_guild(guild_id)) is None:
                 logger.warn(f"Unable to fetch guild {guild_id}")
 
