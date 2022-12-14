@@ -26,5 +26,5 @@ for guild_id, config in _config["guilds"].items():
     daily_points[guild_id] = config["daily_points"]
     door_members[guild_id] = config.get("door_member")
 
-    if hasattr(config, "picture_channel"):
+    if "picture_channel" in config:
         picture_channels[guild_id] = config["picture_channel"]
