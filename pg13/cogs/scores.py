@@ -1,3 +1,4 @@
+import collections
 import itertools
 import logging
 
@@ -9,6 +10,8 @@ from .checks import admin_check
 from .views import Leaderboard
 
 logger = logging.getLogger(__name__)
+
+Increment = collections.namedtuple("Increment", ["guild", "userid", "points"])
 
 
 def make_ordinal(n):
@@ -187,28 +190,38 @@ class Scores(commands.Cog):
             )
 
     async def increment_score(self, member, points, reason=None):
-        await self.bulk_increment_scores(member.guild, [(member.id, points)], reason)
+        await self.bulk_increment_scores([(member, points)], reason)
 
-    async def bulk_increment_scores(self, guild, increments, reason=None):
-        """Changes a user's score by some amount"""
+    async def bulk_increment_scores(self, increments, reason=None):
+        """Changes a user's score by some amount.
+
+        `increments` should be a list of (discord.Member, points) tuples
+        """
+        db_increments = [
+            Increment(member.guild.id, member.id, points)
+            for member, points in increments
+        ]
+
         async with self.db_pool.acquire() as con:
             await con.executemany(
                 "INSERT INTO scores VALUES($1, $2, $3) ON CONFLICT(guild, userid) "
                 "DO UPDATE SET score = scores.score + $3",
-                [(guild.id, *increment) for increment in increments],
+                db_increments,
             )
 
-        affected_users = ", ".join(
-            map(lambda inc: f"{inc[0]} -> {inc[1]} points", increments)
-        )
-        logger.debug(
-            f"User score increments: {affected_users}" + f" (reason: {reason})"
-            if reason is not None
-            else ""
-        )
+        # logging & bonus role updates
+        bonus_roles = self.bot.get_cog("BonusRoles")
+        grouped = itertools.groupby(sorted(db_increments), key=lambda inc: inc.guild)
+        for guild_id, guild_increments in grouped:
+            reason_chunk = f" (reason: {reason})" if reason is not None else ""
+            affected_users = ", ".join(
+                f"{inc.userid} -> {inc.points} points" for inc in guild_increments
+            )
+            logger.debug(f"Scores in guild {guild_id} updated{reason_chunk}: {affected_users}")
 
-        if (bonus_cog := self.bot.get_cog("BonusRoles")) is not None:
-            await bonus_cog.update_bonus_roles(guild)
+            if bonus_roles is not None:
+                affected_guild = self.bot.get_guild(guild_id)
+                bonus_roles.update_bonus_roles(affected_guild)
 
 
 async def setup(bot):
