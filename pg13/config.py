@@ -31,4 +31,4 @@ for guild_id, config in _config["guilds"].items():
         picture_channels[guild_id] = config["picture_channel"]
 
     if "lottery_channel" in config:
-        lottery_channels[guild_id] = config["lottery_channel"\
+        lottery_channels[guild_id] = config["lottery_channel"]
