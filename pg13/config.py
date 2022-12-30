@@ -16,6 +16,7 @@ admins = {}
 door_members = {}
 daily_points = {}
 picture_channels = {}
+lottery_channels = {}
 
 for guild_id, config in _config["guilds"].items():
     guild_id = int(guild_id)
@@ -28,3 +29,6 @@ for guild_id, config in _config["guilds"].items():
 
     if "picture_channel" in config:
         picture_channels[guild_id] = config["picture_channel"]
+
+    if "lottery_channel" in config:
+        lottery_channels[guild_id] = config["lottery_channel"\
