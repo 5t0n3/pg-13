@@ -40,7 +40,15 @@ class Lottery(commands.Cog):
             hour=12, minute=0, second=0
         )
 
-        return draw_datetime
+        # used to check if the draw time already passed today
+        passed = False
+
+        # draw should have happened earlier the same day; do it now to not miss a week
+        if draw_datetime < now:
+            draw_datetime += timedelta(days=7)
+            passed = True
+
+        return draw_datetime, passed
 
     @app_commands.command(
         description="Gamble 5% of your points for a chance to win big :)"
@@ -61,33 +69,38 @@ class Lottery(commands.Cog):
                 ephemeral=True,
             )
 
-        # check that user actually has points/hasn't gambled already
-        # as part of INSERT automatically make stake 5% of points?
+        # these could probably be golfed into a single request but this is easier to understand anyways
         async with self.db_pool.acquire() as con:
-            # TODO: check if this returns nothing on conflicts
-            # lottery stake is 5% of a user's score (for now)
+            # used to check if user has enough points to gamble
+            score = await con.fetchval(
+                "SELECT score FROM scores WHERE userid = $1 AND guild = $2",
+                interaction.user.id,
+                interaction.guild_id,
+            )
+
+            # lottery stake is 5% of a user's score with a 5 point minimum (for now)
             stake = await con.fetchval(
                 "INSERT INTO lottery "
                 "SELECT guild, userid, floor(score * 0.05) AS stake FROM scores "
-                "WHERE userid = $1 AND guild = $2 "
+                "WHERE userid = $1 AND guild = $2 AND score >= 100"
                 "ON CONFLICT (guild, userid) DO NOTHING "
                 "RETURNING stake",
                 interaction.user.id,
                 interaction.guild_id,
             )
 
-        # user already gambled this week (?)
-        if stake is None:
-            next_draw_unix = int(self.next_draw_time.timestamp())
+        # not enough points (or none at all)
+        if score is None or score < 100:
             await interaction.response.send_message(
-                f"You already gambled this week! Wait until the next drawing (<t:{next_draw_unix}:F>) to see if you win :)",
+                "You need at least 100 points to participate in the lottery :)",
                 ephemeral=True,
             )
 
-        # not enough points to gamble (100 point minimum & 5% stake -> 5 point minimum)
-        elif stake < 5:
+        # user already gambled this week
+        elif stake is None:
+            next_draw_unix = int(self.next_draw_time[0].timestamp())
             await interaction.response.send_message(
-                "You need at least 100 points to participate in the lottery :)",
+                f"You already gambled this week! Wait until the next drawing (<t:{next_draw_unix}:F>) to see if you win :)",
                 ephemeral=True,
             )
 
@@ -98,7 +111,7 @@ class Lottery(commands.Cog):
                 interaction.user, -stake, reason="Lottery stake"
             )
             await interaction.response.send_message(
-                f"You bet {stake} points on the lottery :)"
+                f"You bet {stake} points on the lottery :)", ephemeral=True
             )
 
     # do a lottery drawing every week at the same time
@@ -107,18 +120,18 @@ class Lottery(commands.Cog):
         logger.debug("Doing lottery drawing...")
 
         async with self.db_pool.acquire() as con:
-            # TODO: check if this actually works lol
             winners = await con.fetch(
-                "SELECT DISTINCT ON (guild) guild, userid, "
-                "sum(SELECT stake FROM lottery AS inner WHERE inner.guild = outer.guild) / 2 AS prize "
-                "FROM lottery AS outer "
-                "ORDER BY random()"
+                "WITH prizes AS (SELECT guild, sum(stake) / 2 AS prize FROM lottery GROUP BY guild) "
+                "SELECT DISTINCT ON (guild) lottery.guild, userid, prize "
+                "FROM lottery JOIN prizes ON lottery.guild = prizes.guild "
+                "ORDER BY guild, random()"
             )
 
         winner_increments = [
             (self.bot.get_guild(row["guild"]).get_member(row["userid"]), row["prize"])
             for row in winners
         ]
+        logger.debug(f"winners: {winner_increments}")
 
         # theoretically the scores cog should always be loaded?
         if (scores := self.bot.get_cog("Scores")) is not None:
@@ -126,7 +139,7 @@ class Lottery(commands.Cog):
                 winner_increments, reason="Lottery winnings"
             )
 
-        next_draw_unix = int(self.next_draw_time.timestamp())
+        next_draw_unix = int(self.next_draw_time[0].timestamp())
 
         for member, points in winner_increments:
             guild = member.guild
@@ -149,12 +162,14 @@ class Lottery(commands.Cog):
 
     @lottery_draw.before_loop
     async def wait_until_draw(self):
-        draw_datetime = self.next_draw_time
+        await self.bot.wait_until_ready()
+        now = datetime.now()
+        draw_datetime, passed = self.next_draw_time
 
         # draw should have happened earlier the same day; do it now to not miss a week
-        if draw_datetime < now:
+        if passed:
+            logger.warn("Missed a draw; doing it now")
             await self.lottery_draw()
-            draw_datetime += timedelta(days=7)
 
         # datetime.now() has to be called again in case lottery_draw took a while
         logger.debug("Waiting until proper draw time")

@@ -221,7 +221,7 @@ class Scores(commands.Cog):
 
             if bonus_roles is not None:
                 affected_guild = self.bot.get_guild(guild_id)
-                bonus_roles.update_bonus_roles(affected_guild)
+                await bonus_roles.update_bonus_roles(affected_guild)
 
 
 async def setup(bot):
