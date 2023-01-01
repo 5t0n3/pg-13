@@ -60,6 +60,7 @@ class PG13Bot(commands.Bot):
             "pg13.cogs.utilities",
             "pg13.cogs.picture_8ball",
             "pg13.cogs.daily_picture",
+            "pg13.cogs.lottery",
         ]
 
         for cog in cog_list:

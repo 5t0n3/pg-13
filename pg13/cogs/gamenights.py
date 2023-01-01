@@ -34,7 +34,7 @@ def gamenight_increment(guild, host_id, participant):
 
     if participation_points is not None:
         points = participation_points + (17 if participant.member.id == host_id else 0)
-        return (participant.member.id, points)
+        return (participant.member, points)
     else:
         return None
 
@@ -171,7 +171,7 @@ class GameNights(
                 if (bonus := guild_increment(participant)) is not None
             ]
             await scores_cog.bulk_increment_scores(
-                channel.guild, point_increments, reason="Gamenight participation points"
+                point_increments, reason="Gamenight participation points"
             )
 
         summary_channel = channel.guild.get_channel(gamenight_info["start_channel"])
