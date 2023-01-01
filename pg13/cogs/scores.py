@@ -217,7 +217,9 @@ class Scores(commands.Cog):
             affected_users = ", ".join(
                 f"{inc.userid} -> {inc.points} points" for inc in guild_increments
             )
-            logger.debug(f"Scores in guild {guild_id} updated{reason_chunk}: {affected_users}")
+            logger.debug(
+                f"Scores in guild {guild_id} updated{reason_chunk}: {affected_users}"
+            )
 
             if bonus_roles is not None:
                 affected_guild = self.bot.get_guild(guild_id)
