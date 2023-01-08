@@ -121,16 +121,20 @@ class Lottery(commands.Cog):
 
         async with self.db_pool.acquire() as con:
             winners = await con.fetch(
-                "WITH prizes AS (SELECT guild, sum(stake) / 2 AS prize FROM lottery GROUP BY guild) "
-                "SELECT DISTINCT ON (guild) lottery.guild, userid, prize "
+                "WITH prizes AS (SELECT guild, sum(stake) / 2 AS prize, count(*) AS entrants "
+                "FROM lottery GROUP BY guild) "
+                "SELECT DISTINCT ON (guild) lottery.guild, userid, prize, entrants "
                 "FROM lottery JOIN prizes ON lottery.guild = prizes.guild "
                 "ORDER BY guild, random()"
             )
 
-        winner_increments = [
-            (self.bot.get_guild(row["guild"]).get_member(row["userid"]), row["prize"])
+        # yes this is annoying but I need the number of entrants per guild so
+        winner_info = [
+            (self.bot.get_guild(row["guild"]).get_member(row["userid"]), row["prize"], row["entrants"])
             for row in winners
         ]
+        winner_increments = [winner[:2] for winner in winner_info]
+
         logger.debug(f"winners: {winner_increments}")
 
         # theoretically the scores cog should always be loaded?
@@ -141,15 +145,19 @@ class Lottery(commands.Cog):
 
         next_draw_unix = int(self.next_draw_time[0].timestamp())
 
-        for member, points in winner_increments:
+        for member, points, entrants in winner_info:
             guild = member.guild
 
             # configured announcement channel is guaranteed to exist at this point
             win_channel = guild.get_channel(lottery_channels[guild.id])
 
+            # yay weird plurals
+            entrants_phrase = "person" if entrants == 1 else "people"
+
             # ooo timestamps
             await win_channel.send(
-                f"{member.mention} just won **{points}** points in the lottery!\n"
+                f"{member.mention} just won **{points}** points in the lottery! "
+                f"({entrants} {entrants_phrase} entered this round)\n"
                 f"The next drawing will be at <t:{next_draw_unix}>, make sure to get your bets in by then!"
             )
         logger.debug("Finished sending out winner announcements")
