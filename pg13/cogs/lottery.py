@@ -130,7 +130,11 @@ class Lottery(commands.Cog):
 
         # yes this is annoying but I need the number of entrants per guild so
         winner_info = [
-            (self.bot.get_guild(row["guild"]).get_member(row["userid"]), row["prize"], row["entrants"])
+            (
+                self.bot.get_guild(row["guild"]).get_member(row["userid"]),
+                row["prize"],
+                row["entrants"],
+            )
             for row in winners
         ]
         winner_increments = [winner[:2] for winner in winner_info]
