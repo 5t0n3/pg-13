@@ -15,6 +15,7 @@ bonus_roles = {}
 admins = {}
 door_members = {}
 daily_points = {}
+daily_max = {}
 picture_channels = {}
 lottery_channels = {}
 
@@ -24,7 +25,8 @@ for guild_id, config in _config["guilds"].items():
     thresholds[guild_id] = config["thresholds"]
     bonus_roles[guild_id] = config.get("bonus_role")
     admins[guild_id] = config["admins"]
-    daily_points[guild_id] = config["daily_points"]
+    daily_points[guild_id] = config.get("daily_points", 3)
+    daily_max[guild_id] = config.get("daily_max", 10)
     door_members[guild_id] = config.get("door_member")
 
     if "picture_channel" in config:
