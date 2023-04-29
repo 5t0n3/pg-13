@@ -37,7 +37,7 @@
       };
 
       devShells.default = pkgs.mkShell {
-        packages = [self.packages.${system}.pg-13 pkgs.black];
+        packages = [self.packages.${system}.pg-13 pkgs.black pkgs.python310Packages.python-lsp-server];
       };
 
       formatter = pkgs.alejandra;

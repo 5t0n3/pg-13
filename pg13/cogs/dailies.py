@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from .checks import admin_check
-from ..config import daily_points
+from ..config import daily_points, daily_max
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class DailyBonuses(
             # `/daily claim` uses
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS daily_claims"
-                "(guild BIGINT, userid BIGINT, UNIQUE(guild, userid))"
+                "(guild BIGINT, userid BIGINT, claimed BOOLEAN, streak_bonus INT, UNIQUE(guild, userid))"
             )
 
         self.clear_daily_claims.start()
@@ -51,14 +51,19 @@ class DailyBonuses(
     )
     async def daily_claim(self, interaction: discord.Interaction):
         async with self.db_pool.acquire() as con:
-            claim_result = await con.execute(
-                "INSERT INTO daily_claims VALUES($1, $2) ON CONFLICT(guild, userid) DO NOTHING",
+            # add user if not exists; update streak info/claim status if not yet claimed today
+            # cap bonus based on max number of points for guild
+            streak_bonus = await con.fetchval(
+                "INSERT INTO daily_claims VALUES($1, $2, true, 0) "
+                "ON CONFLICT(guild, userid) DO UPDATE SET claimed = true, streak_bonus = LEAST(daily_claims.streak_bonus + 1, $3::INT) "
+                "WHERE NOT daily_claims.claimed "
+                "RETURNING streak_bonus",
                 interaction.guild_id,
                 interaction.user.id,
+                daily_max[interaction.guild_id] - daily_points[interaction.guild_id]
             )
 
-        rows_updated = int(claim_result.split(" ")[-1])
-        if rows_updated == 0:
+        if streak_bonus is None:
             logger.debug(f"User {interaction.user.name} already claimed bonus today")
             await interaction.response.send_message(
                 "You've already claimed today's daily reward :)", ephemeral=True
@@ -69,7 +74,7 @@ class DailyBonuses(
             if (scores_cog := self.bot.get_cog("Scores")) is not None:
                 await scores_cog.increment_score(
                     interaction.user,
-                    daily_points[interaction.guild_id],
+                    daily_points[interaction.guild_id] + streak_bonus,
                     "Claimed daily reward",
                 )
 
@@ -258,7 +263,12 @@ class DailyBonuses(
     async def clear_daily_claims(self):
         async with self.db_pool.acquire() as con:
             await con.execute("TRUNCATE TABLE channel_claims")
-            await con.execute("TRUNCATE TABLE daily_claims")
+            
+            # maintain streak (bonus) if user claimed bonus today, otherwise reset
+            # -1 is used instead of 0 since it's incremented on the first claim (to 0)
+            await con.execute(
+                "UPDATE daily_claims set streak_bonus = CASE WHEN claimed THEN streak_bonus ELSE -1 END, claimed = false"
+            )
 
         logger.debug("Cleared all daily reward tables")
 
