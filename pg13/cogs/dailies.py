@@ -238,7 +238,7 @@ class DailyBonuses(
 
         async with self.db_pool.acquire() as con:
             bonus_points = await con.fetchval(
-                "WITH bonus_info AS (SELECT channel, guild, points, attachment FROM channel_bonuses WHERE channel = $1 AND guild = $2), "
+                "WITH bonus_info AS (SELECT channel, guild, points, attachment FROM channel_bonuses WHERE channel = $1 AND guild = $2) "
                 # replicating implication of attachment -> provided
                 "INSERT INTO channel_claims (SELECT channel, guild, $3::BIGINT FROM bonus_info WHERE NOT attachment OR $4) "
                 "ON CONFLICT(channel, userid) DO NOTHING "
@@ -252,7 +252,9 @@ class DailyBonuses(
             # give user extra point if they claimed all possible channel dailies in this guild
             all_claimed = await con.fetchval(
                 "SELECT (SELECT count(*) FROM channel_bonuses WHERE guild = $1) = "
-                "(SELECT count(*) FROM channel_claims WHERE guild = $1 AND userid = $3)"
+                "(SELECT count(*) FROM channel_claims WHERE guild = $1 AND userid = $2)",
+                message.guild.id,
+                message.author.id,
             )
 
         if (
