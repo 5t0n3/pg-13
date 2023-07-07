@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class BonusRoles(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
 
@@ -25,7 +26,8 @@ class BonusRoles(commands.Cog):
     async def update_bonus_roles(self, guild):
         # Fetch guild's bonus role from config
         if (bonus_id := bonus_roles.get(guild.id)) is None:
-            logger.debug(f"Guild {guild.name} doesn't have a bonus role configured")
+            logger.debug(
+                f"Guild {guild.name} doesn't have a bonus role configured")
             return
 
         # Fetch role object to ensure it exists
@@ -44,7 +46,8 @@ class BonusRoles(commands.Cog):
             )
 
         top_users = set(map(lambda row: row["userid"], top_12))
-        current_bonus_users = set(map(lambda member: member.id, bonus_role.members))
+        current_bonus_users = set(
+            map(lambda member: member.id, bonus_role.members))
 
         gained_role = top_users - current_bonus_users
         lost_role = current_bonus_users - top_users

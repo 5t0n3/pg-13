@@ -14,10 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class DailyBonuses(
-    commands.GroupCog,
-    group_name="daily",
-    group_description="Channel & command daily bonus management",
+        commands.GroupCog,
+        group_name="daily",
+        group_description="Channel & command daily bonus management",
 ):
+
     def __init__(self, bot):
         self.bot = bot
         self.db_pool = bot.db_pool
@@ -57,17 +58,16 @@ class DailyBonuses(
                 "INSERT INTO daily_claims VALUES($1, $2, true, 0) "
                 "ON CONFLICT(guild, userid) DO UPDATE SET claimed = true, streak_bonus = LEAST(daily_claims.streak_bonus + 1, $3::INT) "
                 "WHERE NOT daily_claims.claimed "
-                "RETURNING streak_bonus",
-                interaction.guild_id,
-                interaction.user.id,
-                daily_max[interaction.guild_id] - daily_points[interaction.guild_id]
-            )
+                "RETURNING streak_bonus", interaction.guild_id,
+                interaction.user.id, daily_max[interaction.guild_id] -
+                daily_points[interaction.guild_id])
 
         if streak_bonus is None:
-            logger.debug(f"User {interaction.user.name} already claimed bonus today")
+            logger.debug(
+                f"User {interaction.user.name} already claimed bonus today")
             await interaction.response.send_message(
-                "You've already claimed today's daily reward :)", ephemeral=True
-            )
+                "You've already claimed today's daily reward :)",
+                ephemeral=True)
 
         else:
             # Give user points if they haven't claimed it
@@ -79,8 +79,7 @@ class DailyBonuses(
                 )
 
             await interaction.response.send_message(
-                "Succesfully claimed your daily bonus!"
-            )
+                "Succesfully claimed your daily bonus!")
 
     # CHANNEL DAILY BONUSES
     @app_commands.command(
@@ -90,7 +89,8 @@ class DailyBonuses(
     @app_commands.describe(
         channel="Channel to reward messages in",
         points="Number of bonus points",
-        attachment="Whether to require an attachment (image/link) to get points",
+        attachment=
+        "Whether to require an attachment (image/link) to get points",
     )
     @app_commands.check(admin_check)
     async def daily_attach(
@@ -112,8 +112,8 @@ class DailyBonuses(
         rows_updated = int(bonus_result.split(" ")[-1])
         if rows_updated == 0:
             await interaction.response.send_message(
-                f"{channel.mention} already has a daily point reward!", ephemeral=True
-            )
+                f"{channel.mention} already has a daily point reward!",
+                ephemeral=True)
         else:
             await interaction.response.send_message(
                 f"Successfully added {points}-point daily bonus to {channel.mention}!",
@@ -121,13 +121,12 @@ class DailyBonuses(
             )
 
     @app_commands.command(
-        name="remove", description="Remove a daily message bonus from a text channel."
-    )
+        name="remove",
+        description="Remove a daily message bonus from a text channel.")
     @app_commands.describe(channel="Channel to remove bonus from")
     @app_commands.check(admin_check)
-    async def daily_remove(
-        self, interaction: discord.Interaction, channel: discord.TextChannel
-    ):
+    async def daily_remove(self, interaction: discord.Interaction,
+                           channel: discord.TextChannel):
         async with self.db_pool.acquire() as con:
             delete_result = await con.execute(
                 f"DELETE FROM channel_bonuses WHERE channel = $1 AND guild = $2",
@@ -156,8 +155,8 @@ class DailyBonuses(
             )
 
     @app_commands.command(
-        name="list", description="List all channel daily bonuses in this server."
-    )
+        name="list",
+        description="List all channel daily bonuses in this server.")
     async def daily_list(self, interaction: discord.Interaction):
         async with self.db_pool.acquire() as con:
             guild_dailies = await con.fetch(
@@ -179,19 +178,16 @@ class DailyBonuses(
                     "mention",
                     "<deleted channel>",
                 )
-                attachment_comment = (
-                    " (picture/link required)" if bonus["attachment"] else ""
-                )
+                attachment_comment = (" (picture/link required)"
+                                      if bonus["attachment"] else "")
                 formatted_bonuses.append(
                     f"{channel_mention}: {bonus['points']} points{attachment_comment}"
                 )
 
-            await interaction.response.send_message(
-                embed=discord.Embed(
-                    title=f"{interaction.guild.name} Channel Bonuses",
-                    description="\n".join(formatted_bonuses),
-                )
-            )
+            await interaction.response.send_message(embed=discord.Embed(
+                title=f"{interaction.guild.name} Channel Bonuses",
+                description="\n".join(formatted_bonuses),
+            ))
 
     @app_commands.command(
         name="clean-deleted",
@@ -206,8 +202,7 @@ class DailyBonuses(
             )
 
             deleted_channels = [
-                bonus["channel"]
-                for bonus in daily_channels
+                bonus["channel"] for bonus in daily_channels
                 if interaction.guild.get_channel(bonus["channel"]) is None
             ]
 
@@ -218,8 +213,8 @@ class DailyBonuses(
 
         if int(delete_result.split(" ")[-1]) > 0:
             await interaction.response.send_message(
-                "Cleaned up daily bonuses from deleted channels!", ephemeral=True
-            )
+                "Cleaned up daily bonuses from deleted channels!",
+                ephemeral=True)
             logger.debug(
                 f"Cleaned up daily bonuses from deleted channels in guild {interaction.guild.name}"
             )
@@ -248,7 +243,7 @@ class DailyBonuses(
                 message.author.id,
                 provided_attachment,
             )
-            
+
             # give user extra point if they claimed all possible channel dailies in this guild
             all_claimed = await con.fetchval(
                 "SELECT (SELECT count(*) FROM channel_bonuses WHERE guild = $1) = "
@@ -257,21 +252,21 @@ class DailyBonuses(
                 message.author.id,
             )
 
-        if (
-            bonus_points is not None
-            and (scores_cog := self.bot.get_cog("Scores")) is not None
-        ):
+        if (bonus_points is not None
+                and (scores_cog := self.bot.get_cog("Scores")) is not None):
             await scores_cog.increment_score(
                 message.author,
                 bonus_points + int(all_claimed),
                 reason=f"Bonus claim in #{message.channel.name}",
             )
 
-    @tasks.loop(time=datetime.time(23, 58, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(23,
+                                   58,
+                                   tzinfo=ZoneInfo("America/Los_Angeles")))
     async def clear_daily_claims(self):
         async with self.db_pool.acquire() as con:
             await con.execute("TRUNCATE TABLE channel_claims")
-            
+
             # maintain streak (bonus) if user claimed bonus today, otherwise reset
             # -1 is used instead of 0 since it's incremented on the first claim (to 0)
             await con.execute(

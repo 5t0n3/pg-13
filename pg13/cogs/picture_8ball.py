@@ -27,9 +27,10 @@ def choose_response(response_dir):
 
 
 class Picture8Ball(commands.Cog):
+
     @commands.command(
-        name="ask", description="Receive an answer from the almighty oracle (me)."
-    )
+        name="ask",
+        description="Receive an answer from the almighty oracle (me).")
     async def ask(self, ctx: commands.Context):
         response_dir = pathlib.Path(f"8ball/{ctx.guild.id}")
 

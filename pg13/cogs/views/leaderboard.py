@@ -14,8 +14,8 @@ def build_leaderboard(base_str, member_info):
     score_info = member_info[1]
 
     return (
-        base_str + f"{place}: {score_info.member.display_name} - {score_info.score}\n"
-    )
+        base_str +
+        f"{place}: {score_info.member.display_name} - {score_info.score}\n")
 
 
 def calculate_offset(bundles, users_needed):
@@ -35,6 +35,7 @@ def calculate_offset(bundles, users_needed):
 
 
 class Leaderboard(discord.ui.View):
+
     def __init__(self, guild, db_pool):
         super().__init__()
         self.guild = guild
@@ -72,19 +73,20 @@ class Leaderboard(discord.ui.View):
         self.current_users = valid_users
         self.offsets.append(next_offset)
 
-        valid_next_users, lookahead = calculate_offset(bundled_users[next_offset:], 15)
+        valid_next_users, lookahead = calculate_offset(
+            bundled_users[next_offset:], 15)
         self.next_users = valid_next_users
         self.lookahead_length = lookahead
 
         self.leaderboard_right.disabled = len(self.next_users) == 0
 
-        leaderboard = functools.reduce(
-            build_leaderboard, enumerate(self.current_users, start=1), ""
-        )
+        leaderboard = functools.reduce(build_leaderboard,
+                                       enumerate(self.current_users, start=1),
+                                       "")
         leaderboard_embed = discord.Embed(
-            title=f"{self.guild.name} Leaderboard", description=leaderboard
-        )
-        await interaction.response.send_message(embed=leaderboard_embed, view=self)
+            title=f"{self.guild.name} Leaderboard", description=leaderboard)
+        await interaction.response.send_message(embed=leaderboard_embed,
+                                                view=self)
 
         # Store a reference to the leaderboard message for cleanup purposes
         self.message = await interaction.original_response()
@@ -99,9 +101,9 @@ class Leaderboard(discord.ui.View):
             "",
         )
         leaderboard_embed = discord.Embed(
-            title=f"{self.guild.name} Leaderboard", description=leaderboard
-        )
-        await interaction.response.edit_message(embed=leaderboard_embed, view=self)
+            title=f"{self.guild.name} Leaderboard", description=leaderboard)
+        await interaction.response.edit_message(embed=leaderboard_embed,
+                                                view=self)
 
     async def on_timeout(self):
         # Disable the buttons after the leaderboard expires
@@ -110,9 +112,8 @@ class Leaderboard(discord.ui.View):
         await self.message.edit(view=self)
 
     @discord.ui.button(emoji="⬅️", custom_id="leaderboard:left", disabled=True)
-    async def leaderboard_left(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def leaderboard_left(self, interaction: discord.Interaction,
+                               button: discord.ui.Button):
         self.lookahead_length = len(self.next_users)
         self.next_users = self.current_users
         self.page -= 1
@@ -127,17 +128,15 @@ class Leaderboard(discord.ui.View):
             )
 
         self.current_users = [
-            ScoreInfo(member, row["score"])
-            for row in unbundled_current
+            ScoreInfo(member, row["score"]) for row in unbundled_current
             if (member := self.guild.get_member(row["userid"])) is not None
         ]
 
         await self.update(interaction)
 
     @discord.ui.button(emoji="➡️", custom_id="leaderboard:right")
-    async def leaderboard_right(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
+    async def leaderboard_right(self, interaction: discord.Interaction,
+                                button: discord.ui.Button):
         self.current_users = self.next_users
         self.page += 1
 
@@ -159,9 +158,9 @@ class Leaderboard(discord.ui.View):
 
                 # This is theoretically guaranteed to be 15 users
                 self.next_users = [
-                    ScoreInfo(member, row["score"])
-                    for row in unbundled_next
-                    if (member := self.guild.get_member(row["userid"])) is not None
+                    ScoreInfo(member, row["score"]) for row in unbundled_next
+                    if (member := self.guild.get_member(row["userid"])
+                        ) is not None
                 ]
 
         # Visiting new pages
@@ -179,25 +178,24 @@ class Leaderboard(discord.ui.View):
                     )
 
                 raw_bundled = [
-                    ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
-                    for row in unbundled_complement
+                    ScoreInfo(self.guild.get_member(row["userid"]),
+                              row["score"]) for row in unbundled_complement
                 ]
 
                 # Complete the current 15 user set & record the db offset
                 current_complement, total_complement = calculate_offset(
-                    raw_bundled, 15 - len(self.current_users)
-                )
+                    raw_bundled, 15 - len(self.current_users))
                 self.current_users.extend(current_complement)
-                self.offsets.append(
-                    self.current_offset + self.lookahead_length + total_complement
-                )
+                self.offsets.append(self.current_offset +
+                                    self.lookahead_length + total_complement)
 
                 raw_next_bundles = raw_bundled[total_complement:]
 
             else:
                 # this has to be done before fetching the next users since otherwise self.next_offset
                 # results in indexing out of bounds (I think)
-                self.offsets.append(self.current_offset + self.lookahead_length)
+                self.offsets.append(self.current_offset +
+                                    self.lookahead_length)
 
                 async with self.db_pool.acquire() as con:
                     unbundled_next = await con.fetch(
@@ -208,8 +206,8 @@ class Leaderboard(discord.ui.View):
                     )
 
                 raw_next_bundles = [
-                    ScoreInfo(self.guild.get_member(row["userid"]), row["score"])
-                    for row in unbundled_next
+                    ScoreInfo(self.guild.get_member(row["userid"]),
+                              row["score"]) for row in unbundled_next
                 ]
 
             # Fetch (some of) the users to be displayed on the next page

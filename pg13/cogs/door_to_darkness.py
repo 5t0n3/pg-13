@@ -41,7 +41,8 @@ class DoorToDarkness(commands.Cog):
         # Fetch guild's specific member that has to be mentioned
         mention_id = door_members[message.guild.id]
         if mention_id is None:
-            logger.debug(f"No door user configured for guild f{message.guild.name}")
+            logger.debug(
+                f"No door user configured for guild f{message.guild.name}")
             return
 
         mention_member = message.guild.get_member(int(mention_id))
@@ -52,7 +53,8 @@ class DoorToDarkness(commands.Cog):
 
         # Users have to mention a specific user
         if mention_member not in message.mentions:
-            logger.debug(f"User {message.author.id} didn't mention correct user")
+            logger.debug(
+                f"User {message.author.id} didn't mention correct user")
             return
 
         # Make sure that "door to darkness" is also included in the message
@@ -72,12 +74,16 @@ class DoorToDarkness(commands.Cog):
 
         rows_updated = int(claim_result.split(" ")[-1])
 
-        if rows_updated != 0 and (scores := self.bot.get_cog("Scores")) is not None:
-            await scores.increment_score(
-                message.author, 1, reason="Door to darkness claim"
-            )
+        if rows_updated != 0 and (scores :=
+                                  self.bot.get_cog("Scores")) is not None:
+            await scores.increment_score(message.author,
+                                         1,
+                                         reason="Door to darkness claim")
 
-    @tasks.loop(time=datetime.time(11, 57, 0, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(11,
+                                   57,
+                                   0,
+                                   tzinfo=ZoneInfo("America/Los_Angeles")))
     async def clear_door_claims(self):
         async with self.db_pool.acquire() as con:
             await con.execute(f"TRUNCATE TABLE door_claims")
