@@ -12,7 +12,8 @@ from ..config import thresholds
 
 logger = logging.getLogger(__name__)
 
-Participant = collections.namedtuple("Participant", ["member", "minutes", "formatted"])
+Participant = collections.namedtuple("Participant",
+                                     ["member", "minutes", "formatted"])
 
 
 def gamenight_increment(guild, host_id, participant):
@@ -20,7 +21,8 @@ def gamenight_increment(guild, host_id, participant):
 
     # Convert keys to ints (TOML makes them strings by default)
     point_thresholds = {
-        int(minutes): bonus for minutes, bonus in point_thresholds.items()
+        int(minutes): bonus
+        for minutes, bonus in point_thresholds.items()
     }
 
     point_duration = max(
@@ -33,7 +35,8 @@ def gamenight_increment(guild, host_id, participant):
     participation_points = point_thresholds.get(point_duration)
 
     if participation_points is not None:
-        points = participation_points + (17 if participant.member.id == host_id else 0)
+        points = participation_points + (17 if participant.member.id == host_id
+                                         else 0)
         return (participant.member, points)
     else:
         return None
@@ -46,16 +49,18 @@ def leaderboard_entry(base_str, member_info, guild, host_id):
     host_string = " (host)" if participant.member.id == host_id else ""
 
     return (
-        base_str
-        + f"{place}{host_string} - {participant.member.mention} ({participant.formatted})\n"
+        base_str +
+        f"{place}{host_string} - {participant.member.mention} ({participant.formatted})\n"
     )
 
 
 class GameNights(
-    commands.GroupCog,
-    group_name="gamenight",
-    group_description="Hosting & awarding points for game nights in voice channels",
+        commands.GroupCog,
+        group_name="gamenight",
+        group_description=
+        "Hosting & awarding points for game nights in voice channels",
 ):
+
     def __init__(self, bot):
         self.bot = bot
         self.db_pool = bot.db_pool
@@ -66,16 +71,14 @@ class GameNights(
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS gamenights"
                 "(voice_channel BIGINT UNIQUE, guild BIGINT, host BIGINT, "
-                "start_channel BIGINT, UNIQUE(guild, host))"
-            )
+                "start_channel BIGINT, UNIQUE(guild, host))")
 
             # Voice channel duration tracking
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS voice_logs"
                 "(channel BIGINT, guild BIGINT, userid BIGINT, "
                 "duration INTERVAL, join_time TIMESTAMP WITH TIME ZONE, "
-                "UNIQUE(channel, userid))"
-            )
+                "UNIQUE(channel, userid))")
 
         self.clear_voice_logs.start()
 
@@ -128,8 +131,7 @@ class GameNights(
 
             #  delete from voice_logs/gamenights (or just gamenights? logs cleared at midnight)
             await con.execute(
-                "DELETE FROM gamenights WHERE voice_channel = $1", channel.id
-            )
+                "DELETE FROM gamenights WHERE voice_channel = $1", channel.id)
 
         if gamenight_info is None:
             logger.warn(
@@ -149,14 +151,13 @@ class GameNights(
 
         # outside db:
         #  enumerate users based on duration
-        make_leaderboard = functools.partial(
-            leaderboard_entry, guild=channel.guild, host_id=host_id
-        )
+        make_leaderboard = functools.partial(leaderboard_entry,
+                                             guild=channel.guild,
+                                             host_id=host_id)
 
         #  functools.reduce into embed description?
-        leaderboard = functools.reduce(
-            make_leaderboard, enumerate(participants, start=1), ""
-        )
+        leaderboard = functools.reduce(make_leaderboard,
+                                       enumerate(participants, start=1), "")
 
         #  bulk update scores for users
         if (scores_cog := self.bot.get_cog("Scores")) is not None:
@@ -166,30 +167,27 @@ class GameNights(
                 host_id,
             )
             point_increments = [
-                bonus
-                for participant in participants
+                bonus for participant in participants
                 if (bonus := guild_increment(participant)) is not None
             ]
             await scores_cog.bulk_increment_scores(
-                point_increments, reason="Gamenight participation points"
-            )
+                point_increments, reason="Gamenight participation points")
 
-        summary_channel = channel.guild.get_channel(gamenight_info["start_channel"])
-        await summary_channel.send(
-            embed=discord.Embed(
-                title=f"Game night summary - {channel.name}",
-                description=leaderboard,
-            )
-        )
+        summary_channel = channel.guild.get_channel(
+            gamenight_info["start_channel"])
+        await summary_channel.send(embed=discord.Embed(
+            title=f"Game night summary - {channel.name}",
+            description=leaderboard,
+        ))
 
     @app_commands.command(
         name="host",
         description="Start a game night in your current voice channel.",
     )
     @app_commands.describe(host="The host of the gamenight (default you)")
-    async def gamenight_host(
-        self, interaction: discord.Interaction, host: discord.Member = None
-    ):
+    async def gamenight_host(self,
+                             interaction: discord.Interaction,
+                             host: discord.Member = None):
         if interaction.guild_id not in thresholds:
             logger.warn(
                 f"Attempted to start game night in unconfigured guild {interaction.guild.name}"
@@ -222,14 +220,14 @@ class GameNights(
             )
 
         await interaction.response.send_message(
-            f"Started game night in voice channel {gamenight_channel.name}!"
-        )
-        logger.info(
-            f"Started game night in channel {gamenight_channel.name} "
-            f"with {len(gamenight_channel.members)} initial members"
-        )
+            f"Started game night in voice channel {gamenight_channel.name}!")
+        logger.info(f"Started game night in channel {gamenight_channel.name} "
+                    f"with {len(gamenight_channel.members)} initial members")
 
-    @tasks.loop(time=datetime.time(11, 59, 0, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(11,
+                                   59,
+                                   0,
+                                   tzinfo=ZoneInfo("America/Los_Angeles")))
     async def clear_voice_logs(self):
         async with self.db_pool.acquire() as con:
             # Don't delete logs from channels with an ongoing gamenight

@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class DailyPicture(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
 
@@ -21,14 +22,17 @@ class DailyPicture(commands.Cog):
     async def on_ready(self):
         self.send_pictures.start()
 
-    @tasks.loop(time=datetime.time(10, 00, tzinfo=ZoneInfo("America/Los_Angeles")))
+    @tasks.loop(time=datetime.time(10,
+                                   00,
+                                   tzinfo=ZoneInfo("America/Los_Angeles")))
     async def send_pictures(self):
         for guild_id, channel_id in picture_channels.items():
             if (guild := self.bot.get_guild(guild_id)) is None:
                 logger.warn(f"Unable to fetch guild {guild_id}")
 
             elif (picture_channel := guild.get_channel(channel_id)) is None:
-                logger.warn(f"Guild {guild.name} has no channel with id {channel_id}")
+                logger.warn(
+                    f"Guild {guild.name} has no channel with id {channel_id}")
 
             else:
                 picture_dir = pathlib.Path(f"dailyphotos/{guild_id}")
@@ -44,9 +48,8 @@ class DailyPicture(commands.Cog):
                     random_picture = random.choice(pictures)
 
                     with open(random_picture, "rb") as picture:
-                        await picture_channel.send(
-                            file=discord.File(picture, filename=random_picture.name),
-                        )
+                        await picture_channel.send(file=discord.File(
+                            picture, filename=random_picture.name))
 
 
 async def setup(bot):

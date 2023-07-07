@@ -33,6 +33,7 @@ def make_ordinal(n):
 
 
 class Scores(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
         self.db_pool = bot.db_pool
@@ -59,36 +60,37 @@ class Scores(commands.Cog):
 
     @app_commands.command(
         name="total",
-        description="Check the total amount of points of members of this server.",
+        description=
+        "Check the total amount of points of members of this server.",
     )
     async def total(self, interaction: discord.Interaction):
         async with self.db_pool.acquire() as con:
             guild_total = await con.fetchval(
-                "SELECT sum(score) FROM scores WHERE guild = $1", interaction.guild_id
-            )
+                "SELECT sum(score) FROM scores WHERE guild = $1",
+                interaction.guild_id)
 
         if guild_total is None:
             await interaction.response.send_message(
-                "No users have points in this server."
-            )
+                "No users have points in this server.")
         else:
             await interaction.response.send_message(
-                f"Total points for this server: **{guild_total}**"
-            )
+                f"Total points for this server: **{guild_total}**")
 
     @app_commands.command(
         name="rank",
         description="Display a user's rank & score in this server.",
     )
-    @app_commands.describe(user="The user to display the rank of (default you)")
-    async def rank(self, interaction: discord.Interaction, user: discord.Member = None):
+    @app_commands.describe(user="The user to display the rank of (default you)"
+                           )
+    async def rank(self,
+                   interaction: discord.Interaction,
+                   user: discord.Member = None):
         if user is None:
             user = interaction.user
 
         if user.bot:
             return await interaction.response.send_message(
-                "Bots can't get points silly :)", ephemeral=True
-            )
+                "Bots can't get points silly :)", ephemeral=True)
 
         async with self.db_pool.acquire() as con:
             at_least_equal = await con.fetch(
@@ -102,19 +104,18 @@ class Scores(commands.Cog):
 
         if not at_least_equal:
             return await interaction.response.send_message(
-                "That user doesn't have any points yet.", ephemeral=True
-            )
+                "That user doesn't have any points yet.", ephemeral=True)
 
         user_score = at_least_equal[-1]["score"]
 
         in_guild = [
-            member.id
-            for row in at_least_equal
-            if (member := interaction.guild.get_member(row["userid"])) is not None
+            member.id for row in at_least_equal
+            if (member := interaction.guild.get_member(row["userid"])
+                ) is not None
         ]
         members_ahead = list(
-            itertools.takewhile(lambda member_id: member_id != user.id, in_guild)
-        )
+            itertools.takewhile(lambda member_id: member_id != user.id,
+                                in_guild))
         place = len(members_ahead) + 1
 
         await interaction.response.send_message(
@@ -125,17 +126,14 @@ class Scores(commands.Cog):
         name="set",
         description="Set a user's score to a specific value.",
     )
-    @app_commands.describe(
-        user="Whose score to set", score="The specified user's new score"
-    )
-    async def score_set(
-        self, interaction: discord.Interaction, user: discord.Member, score: int
-    ):
+    @app_commands.describe(user="Whose score to set",
+                           score="The specified user's new score")
+    async def score_set(self, interaction: discord.Interaction,
+                        user: discord.Member, score: int):
         # Bots are ignored for score purposes
         if user.bot:
             return await interaction.response.send(
-                f"{user.name} is a bot and cannot get points.", ephemeral=True
-            )
+                f"{user.name} is a bot and cannot get points.", ephemeral=True)
 
         # Update user's score in guild database table
         async with self.db_pool.acquire() as con:
@@ -154,25 +152,22 @@ class Scores(commands.Cog):
             await bonus_cog.update_bonus_roles(user.guild)
 
         await interaction.response.send_message(
-            f"Successfully updated {user.name}'s score to **{score}**!"
-        )
+            f"Successfully updated {user.name}'s score to **{score}**!")
 
     @score_group.command(
-        name="adjust", description="Give points to or take points away from a user."
-    )
+        name="adjust",
+        description="Give points to or take points away from a user.")
     @app_commands.describe(
         user="Member to give/take points from",
         points="Amount of points to give/take",
     )
     @app_commands.check(admin_check)
-    async def score_adjust(
-        self, interaction: discord.Interaction, user: discord.Member, points: int
-    ):
+    async def score_adjust(self, interaction: discord.Interaction,
+                           user: discord.Member, points: int):
         # Bots are ignored for score purposes
         if user.bot:
             return await interaction.response.send_message(
-                f"{user.name} is a bot and cannot get points."
-            )
+                f"{user.name} is a bot and cannot get points.")
 
         # Update scores in database
         await self.increment_score(user, points, reason="User score adjusted")
@@ -180,14 +175,12 @@ class Scores(commands.Cog):
         # Incrementing user score
         if points >= 0:
             await interaction.response.send_message(
-                f"Gave {user.name} {points} points!"
-            )
+                f"Gave {user.name} {points} points!")
 
         # Decrementing user score
         else:
             await interaction.response.send_message(
-                f"Took {-points} points from {user.name}!"
-            )
+                f"Took {-points} points from {user.name}!")
 
     async def increment_score(self, member, points, reason=None):
         await self.bulk_increment_scores([(member, points)], reason)
@@ -211,12 +204,12 @@ class Scores(commands.Cog):
 
         # logging & bonus role updates
         bonus_roles = self.bot.get_cog("BonusRoles")
-        grouped = itertools.groupby(sorted(db_increments), key=lambda inc: inc.guild)
+        grouped = itertools.groupby(sorted(db_increments),
+                                    key=lambda inc: inc.guild)
         for guild_id, guild_increments in grouped:
             reason_chunk = f" (reason: {reason})" if reason is not None else ""
-            affected_users = ", ".join(
-                f"{inc.userid} -> {inc.points} points" for inc in guild_increments
-            )
+            affected_users = ", ".join(f"{inc.userid} -> {inc.points} points"
+                                       for inc in guild_increments)
             logger.debug(
                 f"Scores in guild {guild_id} updated{reason_chunk}: {affected_users}"
             )

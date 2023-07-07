@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class Lottery(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
         self.db_pool = bot.db_pool
@@ -37,8 +38,7 @@ class Lottery(commands.Cog):
 
         # lottery drawings happen at noon on Sundays
         draw_datetime = (now + timedelta(days=days_until_draw)).replace(
-            hour=12, minute=0, second=0
-        )
+            hour=12, minute=0, second=0)
 
         # used to check if the draw time already passed today
         passed = False
@@ -51,8 +51,7 @@ class Lottery(commands.Cog):
         return draw_datetime, passed
 
     @app_commands.command(
-        description="Gamble 5% of your points for a chance to win big :)"
-    )
+        description="Gamble 5% of your points for a chance to win big :)")
     async def gamble(self, interaction: discord.Interaction):
         # Scores cog is required for gambling to work
         # TODO: move cog requirements to loading process
@@ -107,12 +106,11 @@ class Lottery(commands.Cog):
         # all good to place a bet
         else:
             # subtract the staked points from the user's score
-            await scores.increment_score(
-                interaction.user, -stake, reason="Lottery stake"
-            )
+            await scores.increment_score(interaction.user,
+                                         -stake,
+                                         reason="Lottery stake")
             await interaction.response.send_message(
-                f"You bet {stake} points on the lottery :)", ephemeral=True
-            )
+                f"You bet {stake} points on the lottery :)", ephemeral=True)
 
     # do a lottery drawing every week at the same time
     @tasks.loop(hours=24 * 7)
@@ -125,27 +123,22 @@ class Lottery(commands.Cog):
                 "FROM lottery GROUP BY guild) "
                 "SELECT DISTINCT ON (guild) lottery.guild, userid, prize, entrants "
                 "FROM lottery JOIN prizes ON lottery.guild = prizes.guild "
-                "ORDER BY guild, random()"
-            )
+                "ORDER BY guild, random()")
 
         # yes this is annoying but I need the number of entrants per guild so
-        winner_info = [
-            (
-                self.bot.get_guild(row["guild"]).get_member(row["userid"]),
-                row["prize"],
-                row["entrants"],
-            )
-            for row in winners
-        ]
+        winner_info = [(
+            self.bot.get_guild(row["guild"]).get_member(row["userid"]),
+            row["prize"],
+            row["entrants"],
+        ) for row in winners]
         winner_increments = [winner[:2] for winner in winner_info]
 
         logger.debug(f"winners: {winner_increments}")
 
         # theoretically the scores cog should always be loaded?
         if (scores := self.bot.get_cog("Scores")) is not None:
-            await scores.bulk_increment_scores(
-                winner_increments, reason="Lottery winnings"
-            )
+            await scores.bulk_increment_scores(winner_increments,
+                                               reason="Lottery winnings")
 
         next_draw_unix = int(self.next_draw_time[0].timestamp())
 

@@ -11,13 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 class PG13Tree(discord.app_commands.CommandTree):
-    async def on_error(
-        self, interaction: discord.Interaction, error: app_commands.AppCommandError
-    ):
+
+    async def on_error(self, interaction: discord.Interaction,
+                       error: app_commands.AppCommandError):
         if isinstance(error, app_commands.CheckFailure):
             await interaction.response.send_message(
-                "Hey, you don't have permission to do that :)", ephemeral=True
-            )
+                "Hey, you don't have permission to do that :)", ephemeral=True)
 
         else:
             await interaction.response.send_message(
@@ -31,6 +30,7 @@ class PG13Tree(discord.app_commands.CommandTree):
 
 
 class PG13Bot(commands.Bot):
+
     def __init__(self):
         bot_intents = discord.Intents(
             guild_messages=True,
@@ -50,7 +50,8 @@ class PG13Bot(commands.Bot):
         super().run(token, log_handler=None)
 
     async def setup_hook(self):
-        self.db_pool = await asyncpg.create_pool(database="pg_13", user="pg-13")
+        self.db_pool = await asyncpg.create_pool(database="pg_13",
+                                                 user="pg-13")
 
         cog_list = [
             "pg13.cogs.scores",
@@ -67,9 +68,10 @@ class PG13Bot(commands.Bot):
             await self.load_extension(cog)
 
     async def on_ready(self):
-        bot_presence = discord.Activity(
-            name="your every mov(i)e :)", type=discord.ActivityType.watching
-        )
-        await self.change_presence(activity=bot_presence, status=discord.Status.idle)
+        bot_presence = discord.Activity(name="your every mov(i)e :)",
+                                        type=discord.ActivityType.watching)
+        await self.change_presence(activity=bot_presence,
+                                   status=discord.Status.idle)
 
-        logger.info(f"Now running as {self.user.name}#{self.user.discriminator}!")
+        logger.info(
+            f"Now running as {self.user.name}#{self.user.discriminator}!")
