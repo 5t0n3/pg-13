@@ -1,25 +1,42 @@
 import asyncio
 from datetime import datetime, timedelta
 import logging
+import random
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 from ..config import lottery_channels
+from ..common import CogMissing
 
 logger = logging.getLogger(__name__)
 
+MIN_POINTS = 75
+MEAN_INCREMENT = 25
+EXP_LAMBDA = 1 / MEAN_INCREMENT
+
+
+def prize_rng():
+    """Generates a random lottery prize value.
+    The minimum number of points is defined as MIN_POINTS, with the mean prize
+    amount being 100 (I think).
+    """
+    return int(MIN_POINTS + random.expovariate(EXP_LAMBDA))
+
 
 class Lottery(commands.Cog):
+    TICKET_COST = 20
 
-    def __init__(self, bot):
+    def __init__(self, bot, scores):
         self.bot = bot
+        self.scores = scores
         self.db_pool = bot.db_pool
 
     async def cog_load(self):
         # table initialization
         async with self.db_pool.acquire() as con:
+            # TODO: remove stake column since tickets cost the same for everyone now
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS lottery"
                 "(guild BIGINT, userid BIGINT, stake INT, PRIMARY KEY(guild, userid))"
@@ -51,115 +68,124 @@ class Lottery(commands.Cog):
         return draw_datetime, passed
 
     @app_commands.command(
-        description="Gamble 5% of your points for a chance to win big :)")
-    async def gamble(self, interaction: discord.Interaction):
-        # Scores cog is required for gambling to work
-        # TODO: move cog requirements to loading process
-        if (scores := self.bot.get_cog("Scores")) is None:
-            return await interaction.response.send_message(
-                "I'm not configured to keep track of points in this server silly :)",
-                ephemeral=True,
-            )
+        description=
+        "Buy a lottery ticket for 20 points. Drawings happen every Sunday with the prize amount announced beforehand."
+    )
+    async def buyticket(self, interaction: discord.Interaction):
+        # store ids for easy access
+        guildid = interaction.guild_id
+        userid = interaction.user.id
 
         # we need a configured announcement channel
-        if lottery_channels.get(interaction.guild_id) is None:
+        if lottery_channels.get(guildid) is None:
             return await interaction.response.send_message(
                 "Tell an admin to configure lottery announcements properly :)",
                 ephemeral=True,
             )
 
-        # these could probably be golfed into a single request but this is easier to understand anyways
         async with self.db_pool.acquire() as con:
-            # used to check if user has enough points to gamble
-            score = await con.fetchval(
-                "SELECT score FROM scores WHERE userid = $1 AND guild = $2",
-                interaction.user.id,
-                interaction.guild_id,
-            )
+            already_claimed = await con.fetchval(
+                "SELECT TRUE FROM lottery WHERE userid = $1 AND guild = $2",
+                userid, guildid)
 
-            # lottery stake is 5% of a user's score with a 5 point minimum (for now)
-            stake = await con.fetchval(
-                "INSERT INTO lottery "
-                "SELECT guild, userid, floor(score * 0.05) AS stake FROM scores "
-                "WHERE userid = $1 AND guild = $2 AND score >= 100"
-                "ON CONFLICT (guild, userid) DO NOTHING "
-                "RETURNING stake",
-                interaction.user.id,
-                interaction.guild_id,
-            )
+            if not already_claimed:
+                buy_res = await con.execute(
+                    """
+                    WITH member_info AS (UPDATE scores SET score = score - 20
+                        WHERE userid = $1 AND guild = $2 AND scores.score >= 20
+                        RETURNING (guild, userid))
+                    INSERT INTO lottery (guild, userid) member_info
+                    """, userid, guildid)
 
-        # not enough points (or none at all)
-        if score is None or score < 100:
-            await interaction.response.send_message(
-                "You need at least 100 points to participate in the lottery :)",
-                ephemeral=True,
-            )
+        # INSERT query result has form `INSERT oid count`, where count is the number of updated rows
+        updated_rows = int(buy_res.split()[-1])
+        next_draw_unix = int(self.next_draw_time[0].timestamp())
+        next_draw_timestamp = f"<t:{next_draw_unix}:F>"
 
-        # user already gambled this week
-        elif stake is None:
+        if already_claimed:
             next_draw_unix = int(self.next_draw_time[0].timestamp())
             await interaction.response.send_message(
-                f"You already gambled this week! Wait until the next drawing (<t:{next_draw_unix}:F>) to see if you win :)",
+                "You already entered this week's lottery drawing! "
+                f"Check back at {next_draw_timestamp} to see if you win :)",
                 ephemeral=True,
             )
-
-        # all good to place a bet
-        else:
-            # subtract the staked points from the user's score
-            await scores.increment_score(interaction.user,
-                                         -stake,
-                                         reason="Lottery stake")
+        elif updated_rows == 1:
             await interaction.response.send_message(
-                f"You bet {stake} points on the lottery :)", ephemeral=True)
+                "You've been entered into this week's lottery drawing! "
+                f"Check back at {next_draw_timestamp} to see if you won :)",
+                ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                "You need at least 20 points to enter into the lottery :)",
+                ephemeral=True)
 
     # do a lottery drawing every week at the same time
     @tasks.loop(hours=24 * 7)
     async def lottery_draw(self):
         logger.debug("Doing lottery drawing...")
 
-        async with self.db_pool.acquire() as con:
-            winners = await con.fetch(
-                "WITH prizes AS (SELECT guild, sum(stake) / 2 AS prize, count(*) AS entrants "
-                "FROM lottery GROUP BY guild) "
-                "SELECT DISTINCT ON (guild) lottery.guild, userid, prize, entrants "
-                "FROM lottery JOIN prizes ON lottery.guild = prizes.guild "
-                "ORDER BY guild, random()")
-
-        # yes this is annoying but I need the number of entrants per guild so
-        winner_info = [(
-            self.bot.get_guild(row["guild"]).get_member(row["userid"]),
-            row["prize"],
-            row["entrants"],
-        ) for row in winners]
-        winner_increments = [winner[:2] for winner in winner_info]
-
-        logger.debug(f"winners: {winner_increments}")
-
-        # theoretically the scores cog should always be loaded?
-        if (scores := self.bot.get_cog("Scores")) is not None:
-            await scores.bulk_increment_scores(winner_increments,
-                                               reason="Lottery winnings")
+        # select random winners from each guild
+        winners = await self.db_pool.fetch("""
+            SELECT DISTINCT ON (guild) guild, userid
+                FROM lottery JOIN prizes ON lottery.guild = prizes.guild
+                ORDER BY guild, random()
+            """)
 
         next_draw_unix = int(self.next_draw_time[0].timestamp())
+        next_draw_timestamp = f"<t:{next_draw_unix}>"
+        winner_increments = []
 
-        for member, points, entrants in winner_info:
-            guild = member.guild
+        for winner_record in winners:
+            # I don't think you can destructure records directly in a for loop (?)
+            guildid, userid = tuple(winner_record)
 
-            # configured announcement channel is guaranteed to exist at this point
-            win_channel = guild.get_channel(lottery_channels[guild.id])
+            # NOTE: this assumes the bot is in the configured guild, as
+            # otherwise this throws an AttributeError (guild would be None)
+            guild = self.bot.get_guild(guildid)
+            win_member = guild.get_member(userid)
 
-            # yay weird plurals
-            entrants_phrase = "person" if entrants == 1 else "people"
+            # TODO: refactor to avoid having to do repeated None checks :(
+            if win_member is not None:
+                # generate prize
+                prize = prize_rng()
 
-            # ooo timestamps
-            await win_channel.send(
-                f"{member.mention} just won **{points}** points in the lottery! "
-                f"({entrants} {entrants_phrase} entered this round)\n"
-                f"The next drawing will be at <t:{next_draw_unix}>, make sure to get your bets in by then!"
-            )
-        logger.debug("Finished sending out winner announcements")
+                # send out winner announcement
+                announcement_chan = guild.get_channel(
+                    lottery_channels[guildid])
+                if announcement_chan is not None:
+                    await announcement_chan.send(
+                        f"{win_member.mention} just won **{prize}** points in the lottery! "
+                        f"The next drawing will be at {next_draw_timestamp}, make sure to get your tickets by then!"
+                    )
+                    winner_increments.append((win_member, prize))
+                else:
+                    logger.warn(
+                        f"Guild {guildid} didn't have announcement channel with id {lottery_channels[guildid]}"
+                    )
+            else:
+                logger.warn(
+                    f"User {userid} not found in guild {guildid} to give points"
+                )
 
-        # draws can be cleaned up since points have been given out & winners announced
+        # do bulk increment with all winners
+        await self.scores.bulk_increment_scores(winner_increments,
+                                                reason="Lottery prizes")
+
+        lottery_guilds = set(lottery_channels.keys())
+        winner_guilds = {rec["guild"] for rec in winners}
+
+        # send an announcement in guilds where no one entered this week
+        for guildid in lottery_guilds - winner_guilds:
+            guild = self.bot.get_guild(guildid)
+            announcement_chan = guild.get_channel(lottery_channels[guildid])
+            if announcement_chan is not None:
+                await announcement_chan.send(
+                    "No one entered the lottery this week :(\n"
+                    "Reminder that you can win up to 250 points and it only "
+                    "costs 20 points to buy a ticket! The next drawing is at "
+                    f"{next_draw_timestamp} so make sure to enter by then! :)")
+
+        # clean up purchased tickets in database
         async with self.db_pool.acquire() as con:
             await con.execute("TRUNCATE TABLE lottery")
 
@@ -168,10 +194,11 @@ class Lottery(commands.Cog):
     @lottery_draw.before_loop
     async def wait_until_draw(self):
         await self.bot.wait_until_ready()
-        now = datetime.now()
         draw_datetime, passed = self.next_draw_time
 
         # draw should have happened earlier the same day; do it now to not miss a week
+        # TODO: this breaks if the bot goes down multiple times on a draw day;
+        # maybe record draws in database/persistent storage somehow?
         if passed:
             logger.warn("Missed a draw; doing it now")
             await self.lottery_draw()
@@ -183,4 +210,7 @@ class Lottery(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(Lottery(bot))
+    if (scores := bot.get_cog("Scores")) is None:
+        raise CogMissing("Lottery", "Scores")
+    else:
+        await bot.add_cog(Lottery(bot, scores))

@@ -36,9 +36,7 @@
         };
 
         packages.pg-13 = pkgs.poetry2nix.mkPoetryApplication {
-          projectDir = pkgs.poetry2nix.cleanPythonSources {
-            src = ./.;
-          };
+          projectDir = ./.;
 
           # TODO: bump to 3.11
           python = pkgs.python310;
@@ -65,6 +63,7 @@
             packages = [
               pylsp
               pylsp.optional-dependencies.all
+              self'.packages.pg-13.dependencyEnv
             ];
           };
 

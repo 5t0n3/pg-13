@@ -2,6 +2,7 @@ import collections
 import itertools
 import logging
 
+import asyncpg
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -182,7 +183,24 @@ class Scores(commands.Cog):
             await interaction.response.send_message(
                 f"Took {-points} points from {user.name}!")
 
-    async def increment_score(self, member, points, reason=None):
+    # TODO: interact with scores database through functions like this instead
+    # of directly?
+    async def get_score(self, con: asyncpg.Connection, userid: int,
+                        guildid: int):
+        """Gets a user's score in the provided guild.
+
+        Returns None if they have no points yet.
+        """
+        return con.fetchval(
+            "SELECT score FROM scores WHERE userid = $1 AND guild = $2",
+            userid,
+            guildid,
+        )
+
+    async def increment_score(self,
+                              member: discord.Member,
+                              points,
+                              reason=None):
         await self.bulk_increment_scores([(member, points)], reason)
 
     async def bulk_increment_scores(self, increments, reason=None):
