@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 import logging
 import random
+from zoneinfo import ZoneInfo
 
 import discord
 from discord import app_commands
@@ -47,29 +48,31 @@ class Lottery(commands.Cog):
     @property
     def next_draw_time(self):
         """Fetches the next lottery draw time as a datetime.datetime object"""
-        now = datetime.now()
-        today_weekday = now.weekday()
+        # 1-second addition is a hack to make next draw time work properly
+        # this breaks if the bot starts up right at a draw time but that's extremely unlikely so ;)
+        nowish = datetime.now(
+            ZoneInfo("America/Los_Angeles")) + timedelta(seconds=1)
+        today_weekday = nowish.weekday()
 
         # 6 -> Sunday, as represented by datetime.weekday()
         days_until_draw = 6 - today_weekday
 
         # lottery drawings happen at noon on Sundays
-        draw_datetime = (now + timedelta(days=days_until_draw)).replace(
+        draw_datetime = (nowish + timedelta(days=days_until_draw)).replace(
             hour=12, minute=0, second=0)
 
         # used to check if the draw time already passed today
         passed = False
 
         # draw should have happened earlier the same day; do it now to not miss a week
-        if draw_datetime < now:
+        if draw_datetime < nowish:
             draw_datetime += timedelta(days=7)
             passed = True
 
         return draw_datetime, passed
 
     @app_commands.command(
-        description=
-        "Buy a lottery ticket for 20 points. Drawings happen every Sunday with the prize amount announced beforehand."
+        description="Buy a lottery ticket for 20 points. Drawings happen every Sunday for 75-250 points."
     )
     async def buyticket(self, interaction: discord.Interaction):
         # store ids for easy access
@@ -93,12 +96,10 @@ class Lottery(commands.Cog):
                     """
                     WITH member_info AS (UPDATE scores SET score = score - 20
                         WHERE userid = $1 AND guild = $2 AND scores.score >= 20
-                        RETURNING (guild, userid))
-                    INSERT INTO lottery (guild, userid) member_info
+                        RETURNING guild, userid)
+                    INSERT INTO lottery (guild, userid) (SELECT * FROM member_info)
                     """, userid, guildid)
 
-        # INSERT query result has form `INSERT oid count`, where count is the number of updated rows
-        updated_rows = int(buy_res.split()[-1])
         next_draw_unix = int(self.next_draw_time[0].timestamp())
         next_draw_timestamp = f"<t:{next_draw_unix}:F>"
 
@@ -109,15 +110,19 @@ class Lottery(commands.Cog):
                 f"Check back at {next_draw_timestamp} to see if you win :)",
                 ephemeral=True,
             )
-        elif updated_rows == 1:
-            await interaction.response.send_message(
-                "You've been entered into this week's lottery drawing! "
-                f"Check back at {next_draw_timestamp} to see if you won :)",
-                ephemeral=True)
         else:
-            await interaction.response.send_message(
-                "You need at least 20 points to enter into the lottery :)",
-                ephemeral=True)
+            # INSERT query result has form `INSERT oid count`, where count is the number of updated rows
+            updated_rows = int(buy_res.split()[-1])
+
+            if updated_rows == 1:
+                await interaction.response.send_message(
+                    "You've been entered into this week's lottery drawing! "
+                    f"Check back at {next_draw_timestamp} to see if you won :)",
+                    ephemeral=True)
+            else:
+                await interaction.response.send_message(
+                    "You need at least 20 points to enter into the lottery :)",
+                    ephemeral=True)
 
     # do a lottery drawing every week at the same time
     @tasks.loop(hours=24 * 7)
@@ -127,8 +132,7 @@ class Lottery(commands.Cog):
         # select random winners from each guild
         winners = await self.db_pool.fetch("""
             SELECT DISTINCT ON (guild) guild, userid
-                FROM lottery JOIN prizes ON lottery.guild = prizes.guild
-                ORDER BY guild, random()
+                FROM lottery ORDER BY guild, random()
             """)
 
         next_draw_unix = int(self.next_draw_time[0].timestamp())
@@ -153,6 +157,8 @@ class Lottery(commands.Cog):
                 announcement_chan = guild.get_channel(
                     lottery_channels[guildid])
                 if announcement_chan is not None:
+                    logger.debug(
+                        f"{win_member.name} just won lottery in guild {guild.name}")
                     await announcement_chan.send(
                         f"{win_member.mention} just won **{prize}** points in the lottery! "
                         f"The next drawing will be at {next_draw_timestamp}, make sure to get your tickets by then!"
@@ -205,7 +211,8 @@ class Lottery(commands.Cog):
 
         # datetime.now() has to be called again in case lottery_draw took a while
         logger.debug("Waiting until proper draw time")
-        seconds_until_draw = (draw_datetime - datetime.now()).total_seconds()
+        seconds_until_draw = (
+            draw_datetime - datetime.now(ZoneInfo("America/Los_Angeles"))).total_seconds()
         await asyncio.sleep(seconds_until_draw)
 
 

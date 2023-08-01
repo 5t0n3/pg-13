@@ -47,8 +47,11 @@
         in
           pkgs.mkShell {
             packages = [
+              # pylsp & dependencies (apparently passing nested lists to packages still works?)
               pylsp
               pylsp.optional-dependencies.all
+
+              # pg-13 dependencies for lsp purposes (?)
               self'.packages.pg-13.dependencyEnv
             ];
           };
