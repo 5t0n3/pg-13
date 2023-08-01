@@ -36,26 +36,10 @@
         };
 
         packages.pg-13 = pkgs.poetry2nix.mkPoetryApplication {
-          projectDir = pkgs.poetry2nix.cleanPythonSources {
-            src = ./.;
-          };
+          projectDir = ./.;
 
           # TODO: bump to 3.11
           python = pkgs.python310;
-
-          overrides = [
-            pkgs.poetry2nix.defaultPoetryOverrides
-
-            # I thought this would be fixed but it could be a naming thing
-            # culprit lines: https://github.com/nix-community/poetry2nix/blob/02e4a29cb4ec64f2f5e8989084b80951df2bbb64/overrides/default.nix#L2525-L2528
-            # it also doesn't seem to be present in build-systems.json as of now
-            # TODO: look into cysystemd instead maybe?
-            (final: prev: {
-              systemd-python = prev.systemd-python.overridePythonAttrs (old: {
-                buildInputs = old.buildInputs ++ [pkgs.python310Packages.setuptools];
-              });
-            })
-          ];
         };
 
         devShells.default = let
@@ -63,8 +47,12 @@
         in
           pkgs.mkShell {
             packages = [
+              # pylsp & dependencies (apparently passing nested lists to packages still works?)
               pylsp
               pylsp.optional-dependencies.all
+
+              # pg-13 dependencies for lsp purposes (?)
+              self'.packages.pg-13.dependencyEnv
             ];
           };
 
