@@ -37,10 +37,9 @@ class Lottery(commands.Cog):
     async def cog_load(self):
         # table initialization
         async with self.db_pool.acquire() as con:
-            # TODO: remove stake column since tickets cost the same for everyone now
             await con.execute(
                 "CREATE TABLE IF NOT EXISTS lottery"
-                "(guild BIGINT, userid BIGINT, stake INT, PRIMARY KEY(guild, userid))"
+                "(guild BIGINT, userid BIGINT, PRIMARY KEY(guild, userid))"
             )
 
         self.lottery_draw.start()
