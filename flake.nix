@@ -52,7 +52,8 @@
               pylsp.optional-dependencies.all
 
               # pg-13 dependencies for lsp purposes (?)
-              self'.packages.pg-13.dependencyEnv
+              # TODO: figure out why this leads to runaway memory consumption
+              # self'.packages.pg-13.dependencyEnv
             ];
           };
 
