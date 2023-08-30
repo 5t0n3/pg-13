@@ -16,16 +16,16 @@ I don't expect this to be useful to anyone, but hey, if it is that's great :)
   via a command
 - **Game nights** with points awarded based on how long someone stays in a call
   for
-- Something about the [**Door to Darkness**](pg13/cogs/door_to_darkness.py), if
-  you so desire :)
 
 ## Configuration
 
 An [example configuration](config.example.toml) is included in this repository
-which shows the structure that PG-13 expects when running. If you are running
-PG-13 without using the supplied NixOS module options, it expects a
-`config.toml` file in the working directory, or wherever the `CONFIG_PATH`
-environment variable points to, if applicable.
+which shows the structure that PG-13 expects when running. The bot expects its
+configuration to be supplied as a 
+[systemd credential](https://systemd.io/CREDENTIALS/) with the name `config.toml`.
+If the `services.pg-13.configFile` option is set, this is handled automatically;
+otherwise you can set it up manually using something like the `SetCredential` 
+service option.
 
 If you're using NixOS, something like [agenix](https://github.com/ryantm/agenix)
 can be useful for managing your PG-13 configuration. Just set
@@ -44,7 +44,7 @@ Just add the following to your system configuration flake:
   inputs.pg-13.url = "github:5t0n3/pg-13/v1.2.0";
 
   outputs = { self, nixpkgs, pg-13 }: {
-    nixosConfigurations.yourhostname = nixpkgs.lib.nixosSystem {
+    nixosConfigurations."<yourhostname>" = nixpkgs.lib.nixosSystem {
       system = "<your system/architecture>";
       modules = [
         pg-13.nixosModules.default
@@ -52,7 +52,9 @@ Just add the following to your system configuration flake:
           services.pg-13.enable = true;
 
           # optional but recommended
-          # (defaults to /var/lib/pg-13/config.toml)
+          # automatically sets up the systemd credential expected by the bot
+          # the config file only has to be readable by root, systemd handles
+          # the rest of the permissions
           # services.pg-13.configFile = "<path/to/your/config.toml>";
         })
       ];
@@ -72,7 +74,7 @@ let
     owner = "5t0n3";
     repo = "pg-13";
     rev = "v1.2.0"; # or a commit hash
-    sha256 = "<hash>"; # obtained using nix-prefetch-url
+    sha256 = "<hash>"; # obtained using nix-prefetch-url or nix flake prefetch
   });
 in {
   imports = [ pg-13.nixosModules.default ];
@@ -80,51 +82,19 @@ in {
   services.pg-13.enable = true;
 
   # optional but recommended
-  # (defaults to /var/lib/pg-13/config.toml)
+  # automatically sets up the systemd credential expected by the bot
   # services.pg-13.configFile = "<path/to/your/config.toml>";
 }
 ```
 
-You can probably also add this repository as a channel, if you'd like.
+You can probably also add this repository as a channel, if you'd like. Then
+something like this should work (althought I haven't tested it):
 
-### Nix on other Linux distributions
+```nix
+let pg-13 = import <pg-13>;
+in {
+  imports = [ pg-13.nixosModules.default ];
 
-If you have a flakes-capable Nix on top of another Linux flavor, installation of
-PG-13 is still pretty easy:
-
-```
-$ nix profile install github:5t0n3/pg-13/v1.2.0#pg-13
-```
-
-Without a flakes-capable Nix, you should be able to run the following to achieve
-the same effect:
-
-```
-$ nix-env -f https://github.com/5t0n3/pg-13/tarball/v1.2.0 -iA packages.<your system>.pg-13
-```
-
-In both cases, you will have to install and set up PostgreSQL and systemd
-separately, but Nix will manages all of PG-13's Python dependencies for you.
-
-### Other operating systems (without Nix)
-
-You'll need to install a few things in order to get PG-13 running on other
-operating systems. Plenty of guides should be available online should you need
-them.
-
-- **Python** - I've only tested PG-13 with Python 3.9 and 3.10, but other
-  versions could work
-- [**poetry**](https://python-poetry.org/) - used for Python dependency
-  management
-- **PostgreSQL** - this bot expects database `pg_13` to exist as well as the
-  user `pg-13` with full privileges to it
-- **systemd** - used for logging (via journald); I recommend running the bot
-  with a systemd service
-
-After ensuring all of these are installed and set up properly and
-[configuring the bot](#configuration), you should be able to run this bot using
-the following command from wherever you cloned this repository to:
-
-```
-$ poetry run pg-13
+  # ...
+}
 ```

@@ -74,7 +74,7 @@
             ...
           }: let
             cfg = config.services.pg-13;
-            inherit (lib) mkIf mkOption types;
+            inherit (lib) mkIf mkOption types optionalString;
           in {
             options.services.pg-13 = {
               enable = mkOption {
@@ -84,8 +84,9 @@
               };
 
               configFile = mkOption {
-                type = types.path;
-                default = "/var/lib/pg-13/config.toml";
+                type = with types; nullOr path;
+                default = null;
+                example = "/var/lib/pg-13/config.toml";
                 description = "The path to the PG-13 bot configuration.";
               };
             };
@@ -103,7 +104,7 @@
               systemd.services.pg-13 = {
                 enable = true;
                 description = "the PG-13 point system bot";
-                wants = ["network-online.target"];
+                wants = ["network-online.target" "postgresql.service"];
                 after = ["network-online.target" "postgresql.service"];
                 wantedBy = ["multi-user.target"];
 
@@ -111,7 +112,7 @@
                   User = "pg-13";
                   WorkingDirectory = "/var/lib/pg-13";
                   ExecStart = "${self'.packages.pg-13}/bin/pg-13";
-                  Environment = "CONFIG_PATH=${cfg.configFile}";
+                  LoadCredential = "config.toml" + optionalString (cfg.configFile != null) ":${cfg.configFile}";
                 };
               };
 
