@@ -2,10 +2,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    poetry2nix = {
-      url = "github:nix-community/poetry2nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
@@ -14,11 +10,7 @@
 
   outputs = inputs @ {flake-parts, ...}:
     flake-parts.lib.mkFlake {inherit inputs;}
-    ({
-      inputs,
-      moduleWithSystem,
-      ...
-    }: {
+    ({moduleWithSystem, ...}: {
       systems = ["x86_64-linux" "aarch64-linux"];
 
       perSystem = {
@@ -27,16 +19,21 @@
         system,
         ...
       }: {
-        # use poetry2nix flake overlay to be more up to date
-        _module.args.pkgs = import inputs.nixpkgs {
-          inherit system;
-          overlays = [
-            inputs.poetry2nix.overlay
-          ];
-        };
-
         packages.pg-13 = pkgs.poetry2nix.mkPoetryApplication {
           projectDir = ./.;
+
+          # TODO: remove these once build overrides are upstreamed
+          overrides = pkgs.poetry2nix.overrides.withDefaults (
+            final: prev: {
+              discord-py = prev.discord-py.overridePythonAttrs (old: {
+                buildInputs = old.buildInputs ++ [pkgs.python310Packages.setuptools];
+              });
+
+              systemd-python = prev.systemd-python.overridePythonAttrs (old: {
+                buildInputs = old.buildInputs ++ [pkgs.python310Packages.setuptools];
+              });
+            }
+          );
 
           # TODO: bump to 3.11
           python = pkgs.python310;
@@ -52,8 +49,7 @@
               pylsp.optional-dependencies.all
 
               # pg-13 dependencies for lsp purposes (?)
-              # TODO: figure out why this leads to runaway memory consumption
-              # self'.packages.pg-13.dependencyEnv
+              self'.packages.pg-13.dependencyEnv
             ];
           };
 
