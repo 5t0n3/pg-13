@@ -34,8 +34,8 @@ def load_config():
         daily_max[guild_id] = config.get("daily_max", 10)
         door_members[guild_id] = config.get("door_member")
 
-        if "picture_channel" in config:
-            picture_channels[guild_id] = config["picture_channel"]
+        if "picture_channels" in config:
+            picture_channels[guild_id] = config["picture_channels"]
 
         if "lottery_channel" in config:
             lottery_channels[guild_id] = config["lottery_channel"]
