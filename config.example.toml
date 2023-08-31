@@ -13,6 +13,10 @@ prefix = "[your prefix here]"
 # lottery_channel = [channel id] (optional)
 # door_member = [member id]
 
+# [guilds.guild_id.picture_channels]
+# folder1 = [channel_id]
+# folder2 = [channel_id2]
+
 # [guilds.guild_id.admins]
 # users = [ user_id, ... ]
 # roles = [ role_id, ... ]
