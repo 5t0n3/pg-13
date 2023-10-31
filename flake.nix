@@ -2,6 +2,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    poetry2nix = {
+      url = "github:nix-community/poetry2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-compat = {
       url = "github:edolstra/flake-compat";
       flake = false;
@@ -19,21 +23,26 @@
         system,
         ...
       }: {
+        _module.args.pkgs = import inputs.nixpkgs {
+          inherit system;
+          overlays = [inputs.poetry2nix.overlays.default];
+        };
+
         packages.pg-13 = pkgs.poetry2nix.mkPoetryApplication {
           projectDir = ./.;
 
           # TODO: remove these once build overrides are upstreamed
-          overrides = pkgs.poetry2nix.overrides.withDefaults (
-            final: prev: {
-              discord-py = prev.discord-py.overridePythonAttrs (old: {
-                buildInputs = old.buildInputs ++ [pkgs.python310Packages.setuptools];
-              });
+          # overrides = pkgs.poetry2nix.overrides.withDefaults (
+          #   final: prev: {
+          #     discord-py = prev.discord-py.overridePythonAttrs (old: {
+          #       buildInputs = old.buildInputs ++ [pkgs.python310Packages.setuptools];
+          #     });
 
-              systemd-python = prev.systemd-python.overridePythonAttrs (old: {
-                buildInputs = old.buildInputs ++ [pkgs.python310Packages.setuptools];
-              });
-            }
-          );
+          #     systemd-python = prev.systemd-python.overridePythonAttrs (old: {
+          #       buildInputs = old.buildInputs ++ [pkgs.python310Packages.setuptools];
+          #     });
+          #   }
+          # );
 
           # TODO: bump to 3.11
           python = pkgs.python310;
