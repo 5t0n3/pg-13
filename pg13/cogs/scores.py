@@ -208,8 +208,11 @@ class Scores(commands.Cog):
 
         `increments` should be a list of (discord.Member, points) tuples
         """
+
+        # take into account event multiplier
+        multiplier = self.bot.event_multiplier
         db_increments = [
-            Increment(member.guild.id, member.id, points)
+            Increment(member.guild.id, member.id, points * multiplier)
             for member, points in increments
         ]
 

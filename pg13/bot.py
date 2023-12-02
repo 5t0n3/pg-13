@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import asyncpg
@@ -45,6 +46,14 @@ class PG13Bot(commands.Bot):
             help_command=None,
             intents=bot_intents,
         )
+
+    @property
+    def event_multiplier(self):
+        # double points during December for the holidays
+        if datetime.date.today().month == 12:
+            return 2
+        else:
+            return 1
 
     def run(self):
         super().run(token, log_handler=None)
