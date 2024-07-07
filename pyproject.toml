@@ -2,11 +2,11 @@
 name = "pg13"
 version = "1.2.0"
 description = "A needlessly complicated point system bot for Discord."
-authors = ["5t0n3 <1nk5t0n3@gmail.com>"]
+authors = ["5t0n3 <git@formulaic.cloud>"]
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 aiosqlite = "^0.17.0"
 asyncpg = "^0.27.0"
 "discord.py" = "^2.1.0"

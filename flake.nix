@@ -30,24 +30,11 @@
 
         packages.pg-13 = pkgs.poetry2nix.mkPoetryApplication {
           projectDir = ./.;
-
-          # TODO: remove these once build overrides are upstreamed
-          overrides = pkgs.poetry2nix.overrides.withDefaults (
-            final: prev: {
-              # necessary due to python version being less than 3.11
-              # broken as of https://github.com/aio-libs/yarl/commit/98eac52a7add38dd770f2baf95f0c4c5a62165e5#diff-50c86b7ed8ac2cf95bd48334961bf0530cdc77b5a56f852c5c61b89d735fd711R8-R9
-              yarl = prev.yarl.overridePythonAttrs (old: {
-                buildInputs = old.buildInputs ++ [pkgs.python310Packages.tomli];
-              });
-            }
-          );
-
-          # TODO: bump to 3.11
-          python = pkgs.python310;
+          python = pkgs.python311;
         };
 
         devShells.default = let
-          pylsp = pkgs.python310Packages.python-lsp-server;
+          pylsp = pkgs.python311Packages.python-lsp-server;
         in
           pkgs.mkShell {
             packages = [
@@ -124,11 +111,11 @@
                 enable = true;
                 package = pkgs.postgresql_14;
 
-                ensureDatabases = ["pg_13"];
+                ensureDatabases = ["pg-13"];
                 ensureUsers = [
                   {
                     name = "pg-13";
-                    ensurePermissions = {"DATABASE pg_13" = "ALL PRIVILEGES";};
+                    ensureDBOwnership = true;
                   }
                 ];
               };

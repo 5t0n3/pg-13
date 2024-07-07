@@ -59,7 +59,7 @@ class PG13Bot(commands.Bot):
         super().run(token, log_handler=None)
 
     async def setup_hook(self):
-        self.db_pool = await asyncpg.create_pool(database="pg_13",
+        self.db_pool = await asyncpg.create_pool(database="pg-13",
                                                  user="pg-13")
 
         cog_list = [
